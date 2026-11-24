@@ -441,7 +441,7 @@ class RaLaunchDocumentsProvider : DocumentsProvider() {
 
     companion object {
         private const val TAG = "RaLaunchDocumentsProvider"
-        const val AUTHORITY = "com.app.ralaunch.documents"
+        const val AUTHORITY = "com.mono.ralaunch.documents"
         const val COLUMN_FILE_PATH = "ralaunch_file_path"
         const val COLUMN_FILE_EXTRAS = "ralaunch_file_extras"
         const val METHOD_SET_LAST_MODIFIED = "ralaunch:setLastModified"

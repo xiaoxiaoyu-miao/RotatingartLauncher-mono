@@ -143,7 +143,7 @@
         <!-- RaLaunch 文件提供器 - 用于安全地分享文件 -->
         <provider
             android:name=".core.platform.android.provider.RaLaunchFileProvider"
-            android:authorities="com.app.ralaunch.fileprovider"
+            android:authorities="${applicationId}.fileprovider"
             android:exported="false"
             android:grantUriPermissions="true">
             <meta-data
@@ -154,7 +154,7 @@
         <!-- RaLaunch 文档提供器 - 在系统文件管理器中显示 -->
         <provider
             android:name=".core.platform.android.provider.RaLaunchDocumentsProvider"
-            android:authorities="com.app.ralaunch.documents"
+            android:authorities="${applicationId}.documents"
             android:exported="true"
             android:grantUriPermissions="true"
             android:permission="android.permission.MANAGE_DOCUMENTS">

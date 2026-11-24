@@ -36,7 +36,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.app.ralaunch"
+        applicationId = "com.mono.ralaunch"
         minSdk = 28
         targetSdk = 36
         versionCode = 6

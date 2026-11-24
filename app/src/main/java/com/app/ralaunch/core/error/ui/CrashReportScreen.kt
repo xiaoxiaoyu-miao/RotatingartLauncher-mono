@@ -620,7 +620,7 @@ private fun shareLog(
 
         val fileUri = FileProvider.getUriForFile(
             context,
-            "com.app.ralaunch.fileprovider",
+            com.app.ralaunch.core.platform.android.provider.RaLaunchFileProvider.AUTHORITY,
             logFile
         )
 

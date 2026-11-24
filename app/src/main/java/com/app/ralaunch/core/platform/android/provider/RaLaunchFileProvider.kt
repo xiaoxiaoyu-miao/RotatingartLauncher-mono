@@ -7,6 +7,6 @@ import androidx.core.content.FileProvider
  */
 class RaLaunchFileProvider : FileProvider() {
     companion object {
-        const val AUTHORITY = "com.app.ralaunch.fileprovider"
+        const val AUTHORITY = "com.mono.ralaunch.fileprovider"
     }
 }
