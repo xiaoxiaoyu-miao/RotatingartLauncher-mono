@@ -80,6 +80,15 @@ namespace TML13Launcher
                 Log("ApplyAndroidFixes failed: " + e);
             }
 
+            try
+            {
+                DeployLocalizer();
+            }
+            catch (Exception e)
+            {
+                Log("DeployLocalizer failed: " + e);
+            }
+
             var entry = asm.EntryPoint;
             if (entry == null)
             {
@@ -219,6 +228,93 @@ namespace TML13Launcher
             }
             new MonoMod.RuntimeDetour.Hook(symbolize, new Action<Action<System.Diagnostics.StackFrame[]>, System.Diagnostics.StackFrame[]>((orig, frames) => { }));
             Log("MdbManager.Symbolize hooked (no-op)");
+        }
+
+        /// <summary>
+        /// 部署内置的 LocalizerLite（tModLoader 1.3 精简汉化 mod）。
+        ///
+        /// 原版 !Localizer 在 Android mono 上会在 mod 实例化阶段 native abort；
+        /// LocalizerLite 去掉了 GUI/网络/Harmony ctor hook，只保留 .locpack 导入。
+        /// .tmod 以资源形式嵌在本 exe 里，启动时释放到 <SavePath>/Mods 并写 enabled.json；
+        /// 同时把 Download 下的 .locpack 复制到 <SavePath>/Localizer。
+        /// </summary>
+        private static void DeployLocalizer()
+        {
+            var home = Environment.GetEnvironmentVariable("HOME");
+            if (string.IsNullOrEmpty(home)) home = s_gameDir;
+            var savePath = Path.Combine(home, "Terraria", "ModLoader");
+            var modsDir = Path.Combine(savePath, "Mods");
+            Directory.CreateDirectory(modsDir);
+
+            var target = Path.Combine(modsDir, "Localizer.tmod");
+            var asm = Assembly.GetExecutingAssembly();
+            using (var input = asm.GetManifestResourceStream("Localizer.tmod"))
+            {
+                if (input == null)
+                {
+                    Log("Localizer.tmod resource not found, skip localizer deploy");
+                    return;
+                }
+                using (var output = File.Create(target))
+                {
+                    input.CopyTo(output);
+                }
+            }
+            Log("LocalizerLite deployed: " + target);
+
+            // 汉化包目录：与 Mods 同级的 Localizer/
+            var packDir = Path.Combine(savePath, "Localizer");
+            Directory.CreateDirectory(packDir);
+            var external = Environment.GetEnvironmentVariable("EXTERNAL_STORAGE_DIRECTORY");
+            if (string.IsNullOrEmpty(external)) external = "/storage/emulated/0";
+            CopyLocPacks(Path.Combine(external, "Download"), packDir);
+            CopyLocPacks(Path.Combine(home, "Download"), packDir);
+            CopyLocPacks(savePath, packDir);
+
+            EnableMod(modsDir, "!Localizer");
+        }
+
+        private static void CopyLocPacks(string sourceDir, string targetDir)
+        {
+            try
+            {
+                if (!Directory.Exists(sourceDir)) return;
+                foreach (var file in Directory.GetFiles(sourceDir, "*.locpack"))
+                {
+                    var dest = Path.Combine(targetDir, Path.GetFileName(file));
+                    File.Copy(file, dest, true);
+                    Log("locpack installed: " + dest);
+                }
+            }
+            catch (Exception e)
+            {
+                Log("copy locpack failed: " + e.Message);
+            }
+        }
+
+        private static void EnableMod(string modsDir, string modName)
+        {
+            var path = Path.Combine(modsDir, "enabled.json");
+            try
+            {
+                var text = File.Exists(path) ? File.ReadAllText(path) : "[]";
+                if (text.Contains("\"" + modName + "\"")) return;
+                var index = text.IndexOf('[');
+                if (index >= 0)
+                {
+                    text = text.Insert(index + 1, "\n  \"" + modName + "\",");
+                }
+                else
+                {
+                    text = "[\"" + modName + "\"]";
+                }
+                File.WriteAllText(path, text);
+                Log("enabled.json updated: " + modName);
+            }
+            catch (Exception e)
+            {
+                Log("enable mod failed: " + e.Message);
+            }
         }
 
         /// <summary>

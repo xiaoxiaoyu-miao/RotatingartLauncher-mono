@@ -9,6 +9,18 @@ tModLoader 1.3 跑在 **mono** 上，没有 CoreCLR 的 `DOTNET_STARTUP_HOOKS`�
 产物 `TML13Launcher.exe` 走 LFS，由构建脚本同步到
 `app/src/main/assets/prebuilt/tml13/`，安装时再拷进游戏目录。
 
+## 内置 LocalizerLite（汉化）
+
+`Localizer.tmod` 以资源形式嵌在本 exe 里。启动时包装器会：
+
+- 释放到 `<SavePath>/Mods/Localizer.tmod`
+- 自动把 `enabled.json` 里的 `!Localizer` 补上
+- 把 `/storage/emulated/0/Download/*.locpack` 复制到 `<SavePath>/Localizer/`
+- LocalizerLite 在 `PostSetupContent` 阶段统一导入 `.locpack`
+
+原版 `!Localizer` 在 Android mono 上会在 mod 实例化阶段 native abort；这里是
+去掉 GUI/网络/Harmony ctor hook 的精简版（源码见仓库 `LocalizerLite/`）。
+
 ## 它做了什么
 
 入口 `Program.Main`：切换工作目录 → 注册嵌入程序集解析 → 反射打补丁 → 调

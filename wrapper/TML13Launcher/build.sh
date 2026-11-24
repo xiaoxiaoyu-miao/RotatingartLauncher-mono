@@ -13,9 +13,11 @@ cd "$(dirname "$0")"
 for f in MonoMod.RuntimeDetour.dll MonoMod.Utils.dll Mono.Cecil.dll; do
   [ -f "libs/$f" ] || { echo "缺少 libs/$f"; exit 1; }
 done
+[ -f "Localizer.tmod" ] || { echo "缺少 Localizer.tmod（先构建 LocalizerLite）"; exit 1; }
 
 mcs -nologo -optimize+ -target:exe \
   -r:libs/MonoMod.RuntimeDetour.dll -r:libs/MonoMod.Utils.dll -r:libs/Mono.Cecil.dll \
+  -resource:Localizer.tmod,Localizer.tmod \
   -out:TML13Launcher.exe Program.cs GlCompat.cs
 
 cp TML13Launcher.exe ../../app/src/main/assets/prebuilt/tml13/TML13Launcher.exe
