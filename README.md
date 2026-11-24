@@ -24,7 +24,7 @@
 
 **Rotating Art Launcher** is an Android application that lets you run .NET-based desktop games on mobile devices.<br/>
 Supports native/original releases of FNA/XNA and Mono games, as well as Mono mod loaders such as Everest.<br/>
-This fork keeps **SDL3 + Mono** only: the CoreCLR/.NET runtime has been removed for a smaller, simpler package.
+This fork defaults to **SDL3 + Mono** and removes the CoreCLR/.NET runtime; legacy tModLoader 1.3 auto-switches to SDL2.
 
 </div>
 
@@ -76,9 +76,9 @@ This fork keeps **SDL3 + Mono** only: the CoreCLR/.NET runtime has been removed 
 - Built-in **MonoMod patch system**
 
 ### 🔌 SDL Compatibility
-- **SDL3** runtime and native libraries only
-- Legacy FNA SDL2 API is handled by sdl2-compat on top of SDL3
-- No SDL2/CoreCLR selection anymore
+- **SDL3** runtime and native libraries by default
+- tModLoader 1.3 and other legacy games automatically use the **SDL2** glue layer
+- Legacy FNA SDL2 API can also use sdl2-compat on top of SDL3
 
 </td>
 <td width="50%" valign="top">

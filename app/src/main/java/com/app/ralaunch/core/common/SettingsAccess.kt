@@ -7,6 +7,7 @@ import com.app.ralaunch.core.model.ThemeMode
 import com.app.ralaunch.core.model.TouchInputMode
 import com.app.ralaunch.core.di.contract.ISettingsRepositoryServiceV2
 import com.app.ralaunch.core.platform.runtime.RendererRegistry
+import com.app.ralaunch.core.platform.runtime.SdlVersion
 import kotlinx.coroutines.runBlocking
 import org.koin.java.KoinJavaComponent
 
@@ -94,6 +95,27 @@ object SettingsAccess {
 
     val isTouchMultitouchEnabled: Boolean
         get() = settings.touchMultitouchEnabled
+
+    /** 内部 SDL 版本（"sdl3" 默认 / "sdl2" 旧版 tModLoader 自动切换） */
+    val selectedSdlVersion: String
+        get() = SdlVersion.normalize(settings.selectedSdlVersion)
+
+    /**
+     * 当前 :game 进程真正加载的 SDL 后端。
+     *
+     * 以 Activity 的实际类型为准，避免 GameLaunchManager 的自动判定与
+     * GameLauncher 预加载的 native 库不一致。
+     */
+    val runtimeSdlVersion: String
+        get() = when {
+            org.libsdl.app2.SDL.getContext() is org.libsdl.app2.SDLActivity -> SdlVersion.SDL2
+            org.libsdl.app.SDL.getContext() is org.libsdl.app.SDLActivity -> SdlVersion.SDL3
+            else -> selectedSdlVersion
+        }
+
+    var isUseSdl2: Boolean
+        get() = SdlVersion.isSdl2(settings.selectedSdlVersion)
+        set(value) = update { selectedSdlVersion = if (value) SdlVersion.SDL2 else SdlVersion.SDL3 }
 
     // FNA 触屏设置
     var mouseRightStickSpeed: Int

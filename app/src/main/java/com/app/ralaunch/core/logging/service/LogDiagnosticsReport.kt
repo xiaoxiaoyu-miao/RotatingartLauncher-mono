@@ -38,7 +38,7 @@ internal class LogDiagnosticsReport {
                         "F", "A" -> fatals++
                     }
                     if (entry.message.contains("async log queue was full")) losses++
-                    if (entry.tag == "GameActivity" &&
+                    if (entry.tag in setOf("GameActivity", "GameActivitySdl2") &&
                         entry.message.contains("Process Started")) {
                         sourceSession = entry.timestamp
                         launches[entry.timestamp] = entry

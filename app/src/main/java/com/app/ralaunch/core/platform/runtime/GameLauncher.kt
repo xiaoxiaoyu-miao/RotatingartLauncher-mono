@@ -94,18 +94,30 @@ object GameLauncher {
      * - SkiaSharp: 2D 图形库 / 2D graphics library
      */
     init {
+        // SDL2 与 SDL3 必须互斥加载，否则会发生 native 库冲突。
+        // 默认走 SDL3；tModLoader 1.3 等旧游戏由 GameLaunchManager 自动切到 SDL2。
+        val useSdl2 = runCatching { SdlVersion.isSdl2(SettingsAccess.runtimeSdlVersion) }
+            .getOrDefault(false)
         try {
             System.loadLibrary("fmodL")
             System.loadLibrary("fmod")
             System.loadLibrary("fmodstudioL")
             System.loadLibrary("fmodstudio")
             System.loadLibrary("theorafile")
-            // SDL3 + 兼容旧 FNA 的 sdl2-compat 层。
-            System.loadLibrary("SDL3")
-            System.loadLibrary("SDL2_compat")
-            System.loadLibrary("FAudio_sdl3")
-            System.loadLibrary("FNA3D_sdl3")
-            AppLog.i(TAG, "SDL3 runtime with sdl2-compat loaded for SDL2 API consumers")
+            if (useSdl2) {
+                // SDL2 路径使用从源码编译的 SDL2 版 FAudio/FNA3D。
+                // libSDL2.so 由 org.libsdl.app2.SDLActivity 自己加载。
+                System.loadLibrary("FAudio_sdl2")
+                System.loadLibrary("FNA3D_sdl2")
+                AppLog.i(TAG, "SDL2 runtime loaded for legacy FNA")
+            } else {
+                // SDL3 + 兼容旧 FNA 的 sdl2-compat 层。
+                System.loadLibrary("SDL3")
+                System.loadLibrary("SDL2_compat")
+                System.loadLibrary("FAudio_sdl3")
+                System.loadLibrary("FNA3D_sdl3")
+                AppLog.i(TAG, "SDL3 runtime with sdl2-compat loaded for SDL2 API consumers")
+            }
             System.loadLibrary("main")
             System.loadLibrary("openal32")
             System.loadLibrary("lwjgl_lz4")
@@ -392,14 +404,21 @@ object GameLauncher {
 
             // 步骤11：用 Mono 启动
             // Step 11: Launch with Mono
-            // 旧 FNA 仍走 SDL2 API，由 SDL3 的 sdl2-compat 层承接。
-            val sdlBackend = if (SdlVersion.requiresSdl2Compat(File(assemblyPath))) {
+            // tModLoader 1.3 / 旧版 tModLoader 自带 SDL2 后端，其余默认 SDL3。
+            val runtimeSdlVersion = SettingsAccess.runtimeSdlVersion
+            val sdlBackend = if (
+                SdlVersion.isSdl2(runtimeSdlVersion) ||
+                SdlVersion.requiresSdl2Compat(File(assemblyPath))
+            ) {
                 "SDL2"
             } else {
                 "SDL3"
             }
             EnvVarsManager.quickSetEnvVars(mapOf("FNA_PLATFORM_BACKEND" to sdlBackend))
-            AppLog.i(TAG, "FNA API backend: $sdlBackend; SDL runtime: ${SdlVersion.displayName()}")
+            AppLog.i(
+                TAG,
+                "FNA API backend: $sdlBackend; SDL runtime: ${SdlVersion.displayName(runtimeSdlVersion)}"
+            )
 
             val monoVersion = resolveMonoVersion(runtimeVersionOverride)
             AppLog.i(

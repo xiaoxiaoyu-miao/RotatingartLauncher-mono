@@ -24,7 +24,7 @@
 
 **Rotating Art Launcher** 是一款 Android 应用，让你在移动设备上运行基于 .NET 的桌面游戏。<br/>
 支持 FNA/XNA 和 Mono 游戏原版，以及 Everest 等 Mono 模组加载器。<br/>
-本分支只保留 **SDL3 + Mono**，移除了 CoreCLR/.NET 运行时，安装包更小、启动链更简单。
+本分支默认使用 **SDL3 + Mono**，移除了 CoreCLR/.NET 运行时；tModLoader 1.3 等自带 SDL2 的旧游戏会自动切到 SDL2。
 
 </div>
 
@@ -76,9 +76,9 @@
 - 内置 **MonoMod 补丁系统**
 
 ### 🔌 SDL 兼容性
-- 只保留 **SDL3** 运行时和原生库
-- 旧版 FNA 的 SDL2 API 由 sdl2-compat 在 SDL3 上兼容
-- 不再提供 SDL2/CoreCLR 选项
+- 默认 **SDL3** 运行时和原生库
+- tModLoader 1.3 等旧游戏自动使用 **SDL2** 胶水层
+- 旧版 FNA 的 SDL2 API 也可由 sdl2-compat 在 SDL3 上兼容
 
 </td>
 <td width="50%" valign="top">

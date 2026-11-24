@@ -177,6 +177,11 @@ data class AppSettings(
 
     // Runtime 设置
     var selectedMonoRuntimeVersion: String = "",
+    /**
+     * 内部 SDL 后端选择："sdl3"（默认）或 "sdl2"（仅 tModLoader 1.3 等旧游戏自动使用）。
+     * 不暴露在设置页里，由 GameLaunchManager 根据游戏入口自动决定。
+     */
+    var selectedSdlVersion: String = "sdl3",
     var selectedBox64RuntimeVersion: String = ""
 ) {
     companion object {
