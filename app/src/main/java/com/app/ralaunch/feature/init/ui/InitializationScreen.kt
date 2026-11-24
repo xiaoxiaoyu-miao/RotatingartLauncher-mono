@@ -311,7 +311,7 @@ private fun SetupPage(
                         ) {
                             Column(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Text(
-                                    text = if (component.name == "dotnet") stringResource(R.string.asset_check_component_dotnet_runtime) else component.name,
+                                    text = component.name,
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.Medium
                                 )
@@ -340,7 +340,7 @@ private fun InitPreview() {
     val context = LocalContext.current
     val state = InitUiState(
         hasPermissions = true,
-        components = listOf(ComponentState("dotnet", context.getString(R.string.init_component_dotnet_desc), "dotnet.tar.xz", true, progress = 45)),
+        components = listOf(ComponentState("mono", context.getString(R.string.init_component_mono_desc), "mono-bcl.tar.xz", true, progress = 45)),
         isExtracting = true,
         overallProgress = 45,
         statusMessage = context.getString(R.string.init_extracting)

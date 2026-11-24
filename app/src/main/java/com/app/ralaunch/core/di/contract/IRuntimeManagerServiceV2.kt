@@ -6,11 +6,12 @@ import java.nio.file.Path
  * 运行时管理服务 V2
  *
  * 统一负责运行时目录发现、版本选择与兼容迁移。
+ *
+ * 这一分支只保留 Mono（Box64 作为可选的联机辅助运行时）。
  */
 interface IRuntimeManagerServiceV2 {
 
     enum class RuntimeType(val dirName: String) {
-        DOTNET("dotnet"),
         MONO("mono"),
         BOX64("box64");
 
@@ -35,6 +36,5 @@ interface IRuntimeManagerServiceV2 {
     fun getSelectedRuntime(type: RuntimeType): InstalledRuntime?
     fun getSelectedRuntimeVersion(type: RuntimeType): String?
     suspend fun setSelectedRuntimeVersion(type: RuntimeType, version: String)
-    fun detectDotNetRuntimeVersion(runtimeRootPath: Path): String?
     fun migrateLegacyInstallations()
 }

@@ -90,7 +90,7 @@
     <string name="cancel">Cancel</string>
 
     <!-- Runtime -->
-    <string name="runtime_selector_title">.NET Runtime Version</string>
+    <string name="runtime_selector_title">Mono Runtime Version</string>
     <string name="runtime_version_latest">Latest - Recommended</string>
     <string name="runtime_version_lts">Long Term Support (LTS)</string>
     <string name="runtime_changed">Switched to .NET %s</string>
@@ -361,7 +361,7 @@
     <string name="control_edit_delete">Delete</string>
 
     <!-- MainActivity Messages -->
-    <string name="main_runtime_switched">Switched to .NET %s</string>
+    <string name="main_runtime_switched">Switched to %s</string>
     <string name="main_select_game_first">Please select a game first</string>
     <string name="main_shortcut_removed">Shortcut removed from list</string>
     <string name="main_game_deleted">Game and files deleted</string>
@@ -971,7 +971,7 @@
     <string name="main_runtime_title">.NET Runtime</string>
     
     <!-- Runtime Selector Dialog -->
-    <string name="runtime_selector_title_text">.NET Runtime Version</string>
+    <string name="runtime_selector_title_text">Mono Runtime Version</string>
     <string name="runtime_current_version">Current Version</string>
     <string name="runtime_select_version">Select Version</string>
     <string name="runtime_not_installed">Not installed</string>

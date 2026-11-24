@@ -6,39 +6,34 @@ import com.app.ralaunch.core.di.contract.ISettingsRepositoryServiceV2
 import com.app.ralaunch.core.model.AppSettings
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import kotlin.io.path.createDirectories
 import kotlin.io.path.createFile
 import kotlin.io.path.createTempDirectory
-import kotlin.io.path.exists
-import kotlin.io.path.notExists
 import kotlin.io.path.writeText
 
 class RuntimeManagerServiceV2Test {
 
     @Test
-    fun `getSelectedRuntime falls back to newest installed version`() {
+    fun `getSelectedRuntime falls back to newest installed mono version`() {
         val runtimesRoot = createTempDirectory("runtime-root-")
         val legacyDotnetRoot = createTempDirectory("legacy-dotnet-")
 
         try {
-            createDotNetRuntimeLayout(runtimesRoot.resolve("dotnet").resolve("10.0.0"), "10.0.0")
-            createDotNetRuntimeLayout(runtimesRoot.resolve("dotnet").resolve("10.0.4"), "10.0.4")
+            createMonoRuntimeLayout(runtimesRoot.resolve("mono").resolve("4.5"))
 
             val repository = FakeSettingsRepository(
-                AppSettings(selectedDotnetRuntimeVersion = "9.0.0")
+                AppSettings(selectedMonoRuntimeVersion = "9.9.9")
             )
             val service = RuntimeManagerServiceV2(repository, runtimesRoot, legacyDotnetRoot)
 
-            val selected = service.getSelectedRuntime(IRuntimeManagerServiceV2.RuntimeType.DOTNET)
+            val selected = service.getSelectedRuntime(IRuntimeManagerServiceV2.RuntimeType.MONO)
 
             assertNotNull(selected)
-            assertEquals("10.0.4", selected?.version)
+            assertEquals("4.5", selected?.version)
         } finally {
             FileUtils.deleteDirectoryRecursively(runtimesRoot)
             FileUtils.deleteDirectoryRecursively(legacyDotnetRoot)
@@ -46,75 +41,25 @@ class RuntimeManagerServiceV2Test {
     }
 
     @Test
-    fun `getSelectedRuntime respects persisted version when installed`() {
+    fun `getSelectedRuntime respects persisted mono version when installed`() {
         val runtimesRoot = createTempDirectory("runtime-root-")
         val legacyDotnetRoot = createTempDirectory("legacy-dotnet-")
 
         try {
-            createDotNetRuntimeLayout(runtimesRoot.resolve("dotnet").resolve("10.0.0"), "10.0.0")
-            createDotNetRuntimeLayout(runtimesRoot.resolve("dotnet").resolve("10.0.4"), "10.0.4")
+            createMonoRuntimeLayout(runtimesRoot.resolve("mono").resolve("4.5"))
 
             val repository = FakeSettingsRepository(
-                AppSettings(selectedDotnetRuntimeVersion = "10.0.0")
+                AppSettings(selectedMonoRuntimeVersion = "4.5")
             )
             val service = RuntimeManagerServiceV2(repository, runtimesRoot, legacyDotnetRoot)
 
-            val selected = service.getSelectedRuntime(IRuntimeManagerServiceV2.RuntimeType.DOTNET)
+            val selected = service.getSelectedRuntime(IRuntimeManagerServiceV2.RuntimeType.MONO)
 
             assertNotNull(selected)
-            assertEquals("10.0.0", selected?.version)
+            assertEquals("4.5", selected?.version)
         } finally {
             FileUtils.deleteDirectoryRecursively(runtimesRoot)
             FileUtils.deleteDirectoryRecursively(legacyDotnetRoot)
-        }
-    }
-
-    @Test
-    fun `migrateLegacyInstallations moves legacy dotnet into versioned runtimes layout`() {
-        val runtimesRoot = createTempDirectory("runtime-root-")
-        val legacyParent = createTempDirectory("legacy-parent-")
-        val legacyDotnetRoot = legacyParent.resolve("dotnet")
-
-        try {
-            createDotNetRuntimeLayout(legacyDotnetRoot, "10.0.4")
-
-            val repository = FakeSettingsRepository()
-            val service = RuntimeManagerServiceV2(repository, runtimesRoot, legacyDotnetRoot)
-
-            service.migrateLegacyInstallations()
-
-            val migratedRoot = runtimesRoot.resolve("dotnet").resolve("10.0.4")
-            assertTrue(migratedRoot.exists())
-            assertTrue(legacyDotnetRoot.notExists())
-            assertEquals(
-                "10.0.4",
-                repository.Settings.selectedDotnetRuntimeVersion
-            )
-        } finally {
-            FileUtils.deleteDirectoryRecursively(runtimesRoot)
-            FileUtils.deleteDirectoryRecursively(legacyParent)
-        }
-    }
-
-    @Test
-    fun `getInstalledRuntimes does not migrate legacy dotnet automatically`() {
-        val runtimesRoot = createTempDirectory("runtime-root-")
-        val legacyParent = createTempDirectory("legacy-parent-")
-        val legacyDotnetRoot = legacyParent.resolve("dotnet")
-
-        try {
-            createDotNetRuntimeLayout(legacyDotnetRoot, "10.0.4")
-
-            val service = RuntimeManagerServiceV2(FakeSettingsRepository(), runtimesRoot, legacyDotnetRoot)
-
-            val installed = service.getInstalledRuntimes(IRuntimeManagerServiceV2.RuntimeType.DOTNET)
-
-            assertTrue(installed.isEmpty())
-            assertTrue(legacyDotnetRoot.exists())
-            assertFalse(runtimesRoot.resolve("dotnet").resolve("10.0.4").exists())
-        } finally {
-            FileUtils.deleteDirectoryRecursively(runtimesRoot)
-            FileUtils.deleteDirectoryRecursively(legacyParent)
         }
     }
 
@@ -138,20 +83,28 @@ class RuntimeManagerServiceV2Test {
         }
     }
 
-    private fun createDotNetRuntimeLayout(runtimeRoot: java.nio.file.Path, version: String) {
-        runtimeRoot.resolve("host").resolve("fxr").resolve(version).createDirectories()
-            .resolve("libhostfxr.so")
-            .createFile()
-            .writeText("hostfxr")
+    @Test
+    fun `migrateLegacyInstallations is a no-op for mono-only builds`() {
+        val runtimesRoot = createTempDirectory("runtime-root-")
+        val legacyDotnetRoot = createTempDirectory("legacy-dotnet-")
 
-        val sharedDir = runtimeRoot.resolve("shared")
-            .resolve("Microsoft.NETCore.App")
-            .resolve(version)
-            .createDirectories()
+        try {
+            createMonoRuntimeLayout(runtimesRoot.resolve("mono").resolve("4.5"))
+            val service = RuntimeManagerServiceV2(FakeSettingsRepository(), runtimesRoot, legacyDotnetRoot)
 
-        listOf("libcoreclr.so", "libclrjit.so", "libhostpolicy.so").forEach { fileName ->
-            sharedDir.resolve(fileName).createFile().writeText(fileName)
+            service.migrateLegacyInstallations()
+
+            assertTrue(runtimesRoot.resolve("mono").resolve("4.5").toFile().exists())
+        } finally {
+            FileUtils.deleteDirectoryRecursively(runtimesRoot)
+            FileUtils.deleteDirectoryRecursively(legacyDotnetRoot)
         }
+    }
+
+    private fun createMonoRuntimeLayout(runtimeRoot: java.nio.file.Path) {
+        val bcl = runtimeRoot.resolve("bcl").createDirectories()
+        bcl.resolve("mscorlib.dll").createFile().writeText("mscorlib")
+        bcl.resolve("System.dll").createFile().writeText("System")
     }
 
     private class FakeSettingsRepository(

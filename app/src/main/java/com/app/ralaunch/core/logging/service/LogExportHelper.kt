@@ -304,7 +304,7 @@ internal class LogExportHelper(
                     }
                     appendLine("  Mod Loader Enabled: ${game.modLoaderEnabled}")
                     appendLine("  Renderer Override: ${game.rendererOverride ?: "None"}")
-                    appendLine("  .NET Runtime Override: ${game.dotNetRuntimeVersionOverride ?: "None"}")
+                    appendLine("  Mono Runtime Override: ${game.runtimeVersionOverride ?: "None"}")
                     appendEnvVarSummary(game.gameEnvVars)
                 }
             }

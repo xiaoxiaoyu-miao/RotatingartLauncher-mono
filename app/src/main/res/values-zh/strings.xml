@@ -89,7 +89,7 @@
     <string name="cancel">取消</string>
 
     <!-- 运行时 -->
-    <string name="runtime_selector_title">.NET 运行时版本</string>
+    <string name="runtime_selector_title">Mono 运行时版本</string>
     <string name="runtime_version_latest">最新版本 - 推荐使用</string>
     <string name="runtime_version_lts">长期支持版本 (LTS)</string>
     <string name="runtime_changed">已切换到 .NET %s</string>
@@ -354,7 +354,7 @@
     <string name="control_edit_delete">删除</string>
 
     <!-- MainActivity 消息 -->
-    <string name="main_runtime_switched">已切换到 .NET %s</string>
+    <string name="main_runtime_switched">已切换到 %s</string>
     <string name="main_select_game_first">请先选择一个游戏</string>
     <string name="main_shortcut_removed">快捷方式已从列表移除</string>
     <string name="main_game_deleted">游戏及文件已删除</string>
@@ -659,6 +659,14 @@
     <string name="settings_mono_llvm_subtitle">为 Mono JIT 使用 LLVM 后端（MONO_ENV_OPTIONS=--llvm）</string>
     <string name="settings_mono_verbose_log_title">Mono 详细日志</string>
     <string name="settings_mono_verbose_log_subtitle">输出 Mono 运行时详细日志（MONO_LOG_LEVEL=debug，MONO_LOG_MASK=all）</string>
+    <string name="settings_mono_gc_tuning_title">Mono GC 优化</string>
+    <string name="settings_mono_gc_tuning_subtitle">使用大 SGen nursery + 并发并行 major GC，减少游戏内 GC 卡顿</string>
+    <string name="settings_mono_gc_nursery_title">GC nursery 大小</string>
+    <string name="settings_mono_gc_nursery_subtitle">越大 minor GC 越少，但占用内存也越多</string>
+    <string name="settings_mono_aggressive_jit_title">Mono 激进 JIT</string>
+    <string name="settings_mono_aggressive_jit_subtitle">启用激进内联、别名分析与数组边界检查移除，换取更高运行性能</string>
+    <string name="settings_mono_first_launch_resolution_title">修复首次启动分辨率</string>
+    <string name="settings_mono_first_launch_resolution_subtitle">首次启动泰拉瑞亚 / tModLoader 时直接使用设备分辨率全屏，避免低分辨率拉伸</string>
     <string name="init_component_monomod_desc">MonoMod是一个通用的.NET程序集模组化工具</string>
     <string name="init_component_patches_desc">游戏修复补丁</string>
 
@@ -949,10 +957,10 @@
     <string name="main_select_game_hint">请选择一个游戏</string>
     <string name="main_select_game_instruction">点击左侧游戏开始</string>
     <string name="main_enable_modloader">启用 ModLoader</string>
-    <string name="main_runtime_title">.NET 运行时</string>
+    <string name="main_runtime_title">Mono 运行时</string>
     
     <!-- Runtime Selector Dialog -->
-    <string name="runtime_selector_title_text">.NET 运行时版本</string>
+    <string name="runtime_selector_title_text">Mono 运行时版本</string>
     <string name="runtime_current_version">当前版本</string>
     <string name="runtime_select_version">选择版本</string>
     <string name="runtime_not_installed">未安装</string>
@@ -1635,7 +1643,7 @@
     <string name="settings_game_performance_section">性能</string>
     <string name="settings_game_low_latency_audio_subtitle">降低音频延迟，可能增加功耗</string>
     <string name="settings_game_runtime_section">运行时</string>
-    <string name="settings_game_runtime_subtitle">设置游戏默认使用的 .NET 运行时版本</string>
+    <string name="settings_game_runtime_subtitle">设置游戏默认使用的 Mono 运行时版本</string>
     <string name="settings_sdl_version_title">SDL 版本</string>
     <string name="settings_sdl_version_subtitle">选择 SDL 运行版本</string>
     <string name="settings_sdl_version_sdl2">SDL2</string>
@@ -1810,7 +1818,9 @@
     <string name="asset_fix_result_failed_count">，失败 %1$d 项</string>
     <string name="asset_fix_restart_required">\n\n请重启应用以完成组件重新安装。</string>
     <string name="asset_check_status_dotnet_installed">✓ .NET Runtime 已安装</string>
+    <string name="asset_check_status_mono_installed">✓ Mono Runtime 已安装</string>
     <string name="asset_check_status_dotnet_not_installed">✗ .NET Runtime 未安装</string>
+    <string name="asset_check_status_mono_not_installed">✗ Mono Runtime 未安装</string>
     <string name="asset_check_status_runtime_libs_installed">✓ 运行时库 (%1$d 个库)</string>
     <string name="asset_check_status_runtime_libs_not_extracted">✗ 运行时库未解压</string>
     <string name="extract_failed">解压失败</string>
@@ -2040,6 +2050,7 @@
     <string name="control_editor_snap_threshold_value">10px</string>
     <string name="asset_check_component_dotnet_runtime">.NET 运行时</string>
     <string name="asset_check_status_dotnet_installed_versions">✓ .NET 运行时（%1$s）</string>
+    <string name="asset_check_status_mono_installed_versions">✓ Mono 运行时（%1$s）</string>
     <string name="console_hint_world_select">输入 1、2、3、4 选择世界，输入 n 创建新世界，输入 d+数字 删除世界</string>
     <string name="console_hint_port">输入服务器端口（默认 7777，按回车保留默认值）</string>
     <string name="console_hint_max_players">输入最大玩家数（按回车保留默认值）</string>
@@ -2054,7 +2065,9 @@
     <string name="main_renderer_optional">渲染器（可选）</string>
     <string name="main_renderer_override">覆盖渲染器</string>
     <string name="main_dotnet_runtime_optional">.NET 运行时（可选）</string>
+    <string name="main_mono_runtime_optional">Mono 运行时（可选）</string>
     <string name="main_dotnet_runtime_override">覆盖 .NET 运行时</string>
+    <string name="main_mono_runtime_override">覆盖 Mono 运行时</string>
     <string name="renderer_select">选择渲染器</string>
     <string name="renderer_follow_global_settings">跟随全局设置</string>
     <string name="renderer_follow_global">跟随全局</string>

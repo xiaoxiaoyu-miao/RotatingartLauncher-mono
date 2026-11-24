@@ -27,7 +27,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.app.ralaunch.R
-import com.app.ralaunch.core.platform.runtime.SdlVersion
 import com.app.ralaunch.core.ui.component.GlassSurface
 
 /**
@@ -445,26 +444,6 @@ fun SwitchSettingItem(
         }
     }
 }
-
-/** SDL 版本选择项，使用单选分段按钮而不是二态开关。 */
-@Composable
-fun SdlVersionSettingItem(
-    title: String,
-    subtitle: String? = null,
-    icon: ImageVector? = null,
-    selectedVersion: String,
-    onVersionSelected: (String) -> Unit
-) = ChoiceSettingItem(
-    title = title,
-    subtitle = subtitle,
-    icon = icon,
-    selectedValue = selectedVersion,
-    options = listOf(
-        SdlVersion.SDL2 to stringResource(R.string.settings_sdl_version_sdl2),
-        SdlVersion.SDL3 to stringResource(R.string.settings_sdl_version_sdl3)
-    ),
-    onValueSelected = onVersionSelected
-)
 
 @Composable
 fun ChoiceSettingItem(

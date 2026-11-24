@@ -89,7 +89,7 @@
     <string name="cancel">Отмена</string>
 
     <!-- Runtime -->
-    <string name="runtime_selector_title">Версия .NET Runtime</string>
+    <string name="runtime_selector_title">Версия Mono Runtime</string>
     <string name="runtime_version_latest">Последняя - Рекомендуется</string>
     <string name="runtime_version_lts">Долгосрочная поддержка (LTS)</string>
     <string name="runtime_changed">Переключено на .NET %s</string>
@@ -342,7 +342,7 @@
     <string name="control_edit_delete">Удалить</string>
 
     <!-- MainActivity Messages -->
-    <string name="main_runtime_switched">Переключено на .NET %s</string>
+    <string name="main_runtime_switched">Переключено на %s</string>
     <string name="main_select_game_first">Пожалуйста, сначала выберите игру</string>
     <string name="main_shortcut_removed">Ярлык удален из списка</string>
     <string name="main_game_deleted">Игра и файлы удалены</string>
@@ -913,7 +913,7 @@
     <string name="main_runtime_title">.NET Runtime</string>
     
     <!-- Runtime Selector Dialog -->
-    <string name="runtime_selector_title_text">Версия .NET Runtime</string>
+    <string name="runtime_selector_title_text">Версия Mono Runtime</string>
     <string name="runtime_current_version">Текущая версия</string>
     <string name="runtime_select_version">Выбрать версию</string>
     <string name="runtime_not_installed">Не установлено</string>

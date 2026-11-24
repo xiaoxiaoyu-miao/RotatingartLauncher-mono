@@ -90,7 +90,7 @@
     <string name="cancel">Cancel</string>
 
     <!-- Runtime -->
-    <string name="runtime_selector_title">.NET Runtime Version</string>
+    <string name="runtime_selector_title">Mono Runtime Version</string>
     <string name="runtime_version_latest">Latest - Recommended</string>
     <string name="runtime_version_lts">Long Term Support (LTS)</string>
     <string name="runtime_changed">Switched to .NET %s</string>
@@ -364,7 +364,7 @@
     <string name="control_edit_delete">Delete</string>
 
     <!-- MainActivity Messages -->
-    <string name="main_runtime_switched">Switched to .NET %s</string>
+    <string name="main_runtime_switched">Switched to %s</string>
     <string name="main_select_game_first">Please select a game first</string>
     <string name="main_shortcut_removed">Shortcut removed from list</string>
     <string name="main_game_deleted">Game and files deleted</string>
@@ -676,6 +676,14 @@
     <string name="settings_mono_llvm_subtitle">Use the LLVM backend for Mono JIT (MONO_ENV_OPTIONS=--llvm)</string>
     <string name="settings_mono_verbose_log_title">Mono verbose logging</string>
     <string name="settings_mono_verbose_log_subtitle">Print detailed Mono runtime logs (MONO_LOG_LEVEL=debug, MONO_LOG_MASK=all)</string>
+    <string name="settings_mono_gc_tuning_title">Mono GC tuning</string>
+    <string name="settings_mono_gc_tuning_subtitle">Use a large SGen nursery and concurrent parallel major GC to reduce in-game stutter</string>
+    <string name="settings_mono_gc_nursery_title">GC nursery size</string>
+    <string name="settings_mono_gc_nursery_subtitle">Larger values reduce minor GC frequency but use more memory</string>
+    <string name="settings_mono_aggressive_jit_title">Mono aggressive JIT</string>
+    <string name="settings_mono_aggressive_jit_subtitle">Enable aggressive inlining, alias analysis and bound-check removal for better performance</string>
+    <string name="settings_mono_first_launch_resolution_title">Fix first-launch resolution</string>
+    <string name="settings_mono_first_launch_resolution_subtitle">On first launch, start Terraria / tModLoader at the device resolution in fullscreen instead of a stretched low resolution</string>
     <string name="init_component_monomod_desc">MonoMod is a universal .NET assembly modding tool</string>
     <string name="init_component_patches_desc">Game fix patches</string>
 
@@ -972,10 +980,10 @@
     <string name="main_select_game_hint">Please select a game</string>
     <string name="main_select_game_instruction">Click a game on the left to start</string>
     <string name="main_enable_modloader">Enable ModLoader</string>
-    <string name="main_runtime_title">.NET Runtime</string>
+    <string name="main_runtime_title">Mono Runtime</string>
     
     <!-- Runtime Selector Dialog -->
-    <string name="runtime_selector_title_text">.NET Runtime Version</string>
+    <string name="runtime_selector_title_text">Mono Runtime Version</string>
     <string name="runtime_current_version">Current Version</string>
     <string name="runtime_select_version">Select Version</string>
     <string name="runtime_not_installed">Not installed</string>
@@ -1736,8 +1744,11 @@
     <string name="asset_fix_result_failed_count">%1$d failed</string>
     <string name="asset_fix_restart_required">Please restart the app to complete component reinstallation.</string>
     <string name="asset_check_status_dotnet_installed_versions">✓ .NET Runtime (%1$s)</string>
+    <string name="asset_check_status_mono_installed_versions">✓ Mono Runtime (%1$s)</string>
     <string name="asset_check_status_dotnet_installed">✓ .NET Runtime installed</string>
+    <string name="asset_check_status_mono_installed">✓ Mono Runtime installed</string>
     <string name="asset_check_status_dotnet_not_installed">✗ .NET Runtime not installed</string>
+    <string name="asset_check_status_mono_not_installed">✗ Mono Runtime not installed</string>
     <string name="asset_check_status_runtime_libs_installed">✓ Runtime libraries (%1$d libs)</string>
     <string name="asset_check_status_runtime_libs_not_extracted">✗ Runtime libraries not extracted</string>
 
@@ -1800,7 +1811,7 @@
     <string name="settings_game_performance_section">Performance</string>
     <string name="settings_game_low_latency_audio_subtitle">Reduce audio latency. May increase power usage</string>
     <string name="settings_game_runtime_section">Runtime</string>
-    <string name="settings_game_runtime_subtitle">Set the default .NET runtime version for games</string>
+    <string name="settings_game_runtime_subtitle">Set the default Mono runtime version for games</string>
     <string name="settings_sdl_version_title">SDL Version</string>
     <string name="settings_sdl_version_subtitle">Choose the SDL runtime version</string>
     <string name="settings_sdl_version_sdl2">SDL2</string>
@@ -1833,7 +1844,9 @@
     <string name="main_renderer_optional">Renderer (Optional)</string>
     <string name="main_renderer_override">Renderer Override</string>
     <string name="main_dotnet_runtime_optional">.NET Runtime (Optional)</string>
+    <string name="main_mono_runtime_optional">Mono Runtime (Optional)</string>
     <string name="main_dotnet_runtime_override">.NET Runtime Override</string>
+    <string name="main_mono_runtime_override">Mono Runtime Override</string>
     <string name="main_control_editor_placeholder">Layout Editor</string>
     <string name="main_download">Download</string>
     <string name="main_announcements">Announcements</string>

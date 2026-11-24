@@ -11,7 +11,7 @@
 <br/><br/>
 
 [![Android](https://img.shields.io/badge/Android_9.0+-34A853?style=for-the-badge&logo=android&logoColor=white)](https://www.android.com)
-[![.NET](https://img.shields.io/badge/.NET_10.0-512BD4?style=for-the-badge&logo=dotnet&logoColor=white)](https://dotnet.microsoft.com)
+[![Mono](https://img.shields.io/badge/Mono_6.14-512BD4?style=for-the-badge&logo=mono&logoColor=white)](https://www.mono-project.com)
 [![Kotlin](https://img.shields.io/badge/Kotlin_2.0-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white)](https://kotlinlang.org)
 [![Compose](https://img.shields.io/badge/Jetpack_Compose-4285F4?style=for-the-badge&logo=jetpackcompose&logoColor=white)](https://developer.android.com/jetpack/compose)
 
@@ -23,8 +23,8 @@
 <br/>
 
 **Rotating Art Launcher** is an Android application that lets you run .NET-based desktop games on mobile devices.<br/>
-Supports native/original releases of FNA/XNA and Mono games, as well as mod loaders like tModLoader, SMAPI, and Everest.<br/>
-The runtime supports both **SDL2 and SDL3**, with an integrated **Mono runtime** for compatible games.
+Supports native/original releases of FNA/XNA and Mono games, as well as Mono mod loaders such as Everest.<br/>
+This fork keeps **SDL3 + Mono** only: the CoreCLR/.NET runtime has been removed for a smaller, simpler package.
 
 </div>
 
@@ -69,16 +69,16 @@ The runtime supports both **SDL2 and SDL3**, with an integrated **Mono runtime**
 <td width="50%" valign="top">
 
 ### 🧩 Runtime & Frameworks
-- Full **.NET 10.0 Runtime** integrated
 - Integrated **Mono runtime** for original Mono-based games
-- Native .NET assembly execution
+- Native Mono assembly execution
+- **Mono tuning**: large nursery GC, concurrent parallel major GC, aggressive JIT, optional LLVM
 - **FNA / XNA** game framework support
 - Built-in **MonoMod patch system**
 
 ### 🔌 SDL Compatibility
-- **SDL2** runtime and native libraries supported
-- **SDL3** runtime and native libraries supported
-- Select the SDL version required by the game at launch
+- **SDL3** runtime and native libraries only
+- Legacy FNA SDL2 API is handled by sdl2-compat on top of SDL3
+- No SDL2/CoreCLR selection anymore
 
 </td>
 <td width="50%" valign="top">
@@ -149,7 +149,7 @@ The runtime supports both **SDL2 and SDL3**, with an integrated **Mono runtime**
 1. Open Rotating Art Launcher
 2. Tap **"+"** to add a game (or download via GOG)
 3. Select the game executable
-4. Configure the renderer, SDL version (**SDL2** or **SDL3**), runtime (**.NET** or **Mono**), and controls; with SDL3, **Vulkan** rendering is available
+4. Configure the renderer, Mono tuning, and controls; **Vulkan** rendering is available
 5. Launch and enjoy 🎮
 
 ## 🛠️ Building from Source
@@ -193,14 +193,13 @@ RotatingartLauncher/
 │   └── src/main/
 │       ├── java/.../ralaunch/    # Kotlin/Java source code
 │       │   ├── core/             #   Game launch core logic
-│       │   ├── dotnet/           #   .NET runtime integration
 │       │   ├── renderer/         #   Renderer config & loading
 │       │   ├── controls/         #   Virtual control system
 │       │   ├── gog/              #   GOG Galaxy integration
 │       │   ├── easytier/         #   EasyTier multiplayer service
 │       │   ├── patch/            #   Patch management system
 │       │   └── ui/               #   Compose UI screens
-│       ├── cpp/                  #   Native C/C++ (SDL2, GL4ES ...)
+│       ├── cpp/                  #   Native C/C++ (SDL3, GL4ES ...)
 │       └── assets/               #   Runtime resources
 ├── shared/                       # Kotlin Multiplatform shared module
 │   └── src/
@@ -250,9 +249,8 @@ This project is licensed under the **GNU General Public License v3.0 (GPLv3)**. 
 
 | Library | License |
 |:-------:|:-------:|
-| [SDL2](https://www.libsdl.org/) | [Zlib License](https://www.libsdl.org/license.php) |
 | [GL4ES](https://github.com/ptitSeb/gl4es) | [MIT License](https://github.com/ptitSeb/gl4es/blob/master/LICENSE) |
-| [.NET Runtime](https://github.com/dotnet/runtime) | [MIT License](https://github.com/dotnet/runtime/blob/main/LICENSE.TXT) |
+| [Mono](https://www.mono-project.com/) | [MIT License](https://github.com/mono/mono/blob/main/LICENSE) |
 | [FNA3D](https://github.com/FNA-XNA/FNA3D) | [Microsoft Public License](https://github.com/FNA-XNA/FNA3D/blob/master/LICENSE) |
 
 </details>
@@ -269,7 +267,7 @@ Special thanks to the following open-source projects and communities
 |:-------:|:-----------:|
 | [SDL Project](https://www.libsdl.org/) | Cross-platform media library |
 | [GL4ES](https://github.com/ptitSeb/gl4es) | OpenGL compatibility layer |
-| [.NET Runtime](https://github.com/dotnet/runtime) | .NET runtime |
+| [Mono](https://www.mono-project.com/) | Mono runtime |
 | [FNA](https://github.com/FNA-XNA/FNA) | XNA compatibility framework |
 | [ANGLE](https://chromium.googlesource.com/angle/angle) | OpenGL ES over Vulkan |
 | [EasyTier](https://github.com/EasyTier/EasyTier) | P2P networking |

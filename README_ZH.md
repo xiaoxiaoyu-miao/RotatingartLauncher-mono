@@ -11,7 +11,7 @@
 <br/><br/>
 
 [![Android](https://img.shields.io/badge/Android_9.0+-34A853?style=for-the-badge&logo=android&logoColor=white)](https://www.android.com)
-[![.NET](https://img.shields.io/badge/.NET_10.0-512BD4?style=for-the-badge&logo=dotnet&logoColor=white)](https://dotnet.microsoft.com)
+[![Mono](https://img.shields.io/badge/Mono_6.14-512BD4?style=for-the-badge&logo=mono&logoColor=white)](https://www.mono-project.com)
 [![Kotlin](https://img.shields.io/badge/Kotlin_2.0-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white)](https://kotlinlang.org)
 [![Compose](https://img.shields.io/badge/Jetpack_Compose-4285F4?style=for-the-badge&logo=jetpackcompose&logoColor=white)](https://developer.android.com/jetpack/compose)
 
@@ -23,8 +23,8 @@
 <br/>
 
 **Rotating Art Launcher** 是一款 Android 应用，让你在移动设备上运行基于 .NET 的桌面游戏。<br/>
-支持 FNA/XNA 和 Mono 游戏原版，以及 tModLoader、SMAPI、Everest 等模组加载器。<br/>
-运行时同时支持 **SDL2 和 SDL3**，并集成了适用于兼容游戏的 **Mono 运行时**。
+支持 FNA/XNA 和 Mono 游戏原版，以及 Everest 等 Mono 模组加载器。<br/>
+本分支只保留 **SDL3 + Mono**，移除了 CoreCLR/.NET 运行时，安装包更小、启动链更简单。
 
 </div>
 
@@ -69,16 +69,16 @@
 <td width="50%" valign="top">
 
 ### 🧩 运行时与游戏框架
-- 集成完整的 **.NET 10.0 Runtime**
-- 集成适用于原版 Mono 游戏的 **Mono 运行时**
+- 只集成适用于原版 Mono 游戏的 **Mono 运行时**
+- **Mono 优化**：大 nursery GC、并发并行 major GC、激进 JIT、LLVM 可选
 - 原生运行 .NET 程序集
 - 支持 **FNA / XNA** 游戏框架
 - 内置 **MonoMod 补丁系统**
 
 ### 🔌 SDL 兼容性
-- 支持 **SDL2** 运行时和原生库
-- 支持 **SDL3** 运行时和原生库
-- 启动时可选择游戏所需的 SDL 版本
+- 只保留 **SDL3** 运行时和原生库
+- 旧版 FNA 的 SDL2 API 由 sdl2-compat 在 SDL3 上兼容
+- 不再提供 SDL2/CoreCLR 选项
 
 </td>
 <td width="50%" valign="top">
@@ -149,7 +149,7 @@
 1. 打开 Rotating Art Launcher
 2. 点击 **「+」** 添加游戏（或通过 GOG 下载）
 3. 选择游戏可执行文件
-4. 配置渲染器、SDL 版本（**SDL2** 或 **SDL3**）、运行时（**.NET** 或 **Mono**）和控件布局；使用 SDL3 时可选择 **Vulkan** 渲染
+4. 配置渲染器、Mono 优化项和控件布局；渲染后端可选 **Vulkan**
 5. 启动游戏 🎮
 
 ## 🛠️ 从源码构建
@@ -193,14 +193,13 @@ RotatingartLauncher/
 │   └── src/main/
 │       ├── java/.../ralaunch/    # Kotlin/Java 源码
 │       │   ├── core/             #   游戏启动核心逻辑
-│       │   ├── dotnet/           #   .NET 运行时集成
 │       │   ├── renderer/         #   渲染器配置与加载
 │       │   ├── controls/         #   虚拟控件系统
 │       │   ├── gog/              #   GOG Galaxy 集成
 │       │   ├── easytier/         #   EasyTier 联机服务
 │       │   ├── patch/            #   补丁管理系统
 │       │   └── ui/               #   Compose UI 界面
-│       ├── cpp/                  #   原生 C/C++ (SDL2, GL4ES ...)
+│       ├── cpp/                  #   原生 C/C++ (SDL3, GL4ES ...)
 │       └── assets/               #   运行时资源
 ├── shared/                       # Kotlin Multiplatform 共享模块
 │   └── src/
@@ -250,9 +249,8 @@ RotatingartLauncher/
 
 | 库 | 许可证 |
 |:--:|:------:|
-| [SDL2](https://www.libsdl.org/) | [Zlib License](https://www.libsdl.org/license.php) |
 | [GL4ES](https://github.com/ptitSeb/gl4es) | [MIT License](https://github.com/ptitSeb/gl4es/blob/master/LICENSE) |
-| [.NET Runtime](https://github.com/dotnet/runtime) | [MIT License](https://github.com/dotnet/runtime/blob/main/LICENSE.TXT) |
+| [Mono](https://www.mono-project.com/) | [MIT License](https://github.com/mono/mono/blob/main/LICENSE) |
 | [FNA3D](https://github.com/FNA-XNA/FNA3D) | [Microsoft Public License](https://github.com/FNA-XNA/FNA3D/blob/master/LICENSE) |
 
 </details>
@@ -269,7 +267,7 @@ RotatingartLauncher/
 |:----:|:----:|
 | [SDL Project](https://www.libsdl.org/) | 跨平台媒体库 |
 | [GL4ES](https://github.com/ptitSeb/gl4es) | OpenGL 兼容层 |
-| [.NET Runtime](https://github.com/dotnet/runtime) | .NET 运行时 |
+| [Mono](https://www.mono-project.com/) | Mono 运行时 |
 | [FNA](https://github.com/FNA-XNA/FNA) | XNA 兼容框架 |
 | [ANGLE](https://chromium.googlesource.com/angle/angle) | OpenGL ES over Vulkan |
 | [EasyTier](https://github.com/EasyTier/EasyTier) | P2P 组网 |

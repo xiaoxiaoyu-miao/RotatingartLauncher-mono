@@ -13,10 +13,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class GameInfoEditUiState(
-    val installedDotNetRuntimeVersions: List<String> = emptyList(),
-    val globalDotNetRuntimeVersion: String? = null,
     val installedMonoRuntimeVersions: List<String> = emptyList(),
-    val globalRuntimeEngine: String = RuntimeSpec.ENGINE_DOTNET,
     val globalMonoRuntimeVersion: String? = null
 )
 
@@ -34,28 +31,16 @@ class GameInfoEditViewModel(
 
     private fun loadRuntimeOptions() {
         viewModelScope.launch(Dispatchers.IO) {
-            val installedVersions = runtimeManager.getInstalledVersions(
-                IRuntimeManagerServiceV2.RuntimeType.DOTNET
-            )
-            val selectedVersion = runtimeManager.getSelectedRuntimeVersion(
-                IRuntimeManagerServiceV2.RuntimeType.DOTNET
-            ) ?: installedVersions.firstOrNull()
             val installedMonoVersions = runtimeManager.getInstalledVersions(
                 IRuntimeManagerServiceV2.RuntimeType.MONO
             )
             val settings = settingsRepository.getSettingsSnapshot()
             _uiState.update {
                 it.copy(
-                    installedDotNetRuntimeVersions = installedVersions,
-                    globalDotNetRuntimeVersion = selectedVersion,
                     installedMonoRuntimeVersions = installedMonoVersions,
-                    globalRuntimeEngine = settings.selectedRuntimeEngine
-                        .trim()
-                        .ifBlank { RuntimeSpec.ENGINE_DOTNET },
-                    globalMonoRuntimeVersion = settings.selectedMonoRuntimeVersion
-                        .trim()
-                        .ifBlank { null }
-                        ?: installedMonoVersions.firstOrNull()
+                    globalMonoRuntimeVersion = RuntimeSpec.decode(
+                        settings.selectedMonoRuntimeVersion
+                    ).version
                 )
             }
         }

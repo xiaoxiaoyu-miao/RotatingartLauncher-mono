@@ -203,7 +203,7 @@ class CelesteInstallPlugin : BaseInstallPlugin() {
             )
         }
 
-        val patchResult = GameLauncher.launchDotNetAssembly(
+        val patchResult = GameLauncher.launchMonoAssembly(
             outputDir.resolve("MiniInstaller.dll").toString(),
             arrayOf(),
             patches

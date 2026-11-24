@@ -189,7 +189,7 @@ abstract class BaseInstallPlugin : GameInstallPlugin {
             gameExePathRelative = gameExePathRelative,
             iconPathRelative = iconPathRelative,
             modLoaderEnabled = definition.isModLoader,
-            dotNetRuntimeVersionOverride = runtimeOverride,
+            runtimeVersionOverride = runtimeOverride,
             gameEnvVars = envVars
         )
 
@@ -314,7 +314,7 @@ abstract class BaseInstallPlugin : GameInstallPlugin {
             gameExePathRelative = gameExePathRelative,
             iconPathRelative = iconPathRelative,
             modLoaderEnabled = definition.isModLoader,
-            dotNetRuntimeVersionOverride = runtimeOverride,
+            runtimeVersionOverride = runtimeOverride,
             gameEnvVars = envVars
         )
     }

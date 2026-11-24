@@ -51,7 +51,7 @@ class InitializationActivity : ComponentActivity() {
 
             LaunchedEffect(uiState.isComplete) {
                 if (uiState.isComplete) {
-                    Toast.makeText(this@InitializationActivity, getString(R.string.init_dotnet_install_success), Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@InitializationActivity, getString(R.string.init_complete), Toast.LENGTH_SHORT).show()
                     delay(1000)
                     navigateToMain()
                 }

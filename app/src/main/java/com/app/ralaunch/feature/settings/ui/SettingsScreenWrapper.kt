@@ -27,7 +27,9 @@ import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.AspectRatio
 import androidx.compose.material.icons.filled.Audiotrack
+import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.DarkMode
@@ -109,11 +111,10 @@ import com.app.ralaunch.core.navigation.NavState
 import com.app.ralaunch.core.navigation.navigateToLogViewer
 import com.app.ralaunch.core.navigation.navigateToPatchManagement
 import com.app.ralaunch.core.platform.runtime.RuntimeSpec
-import com.app.ralaunch.core.platform.runtime.SdlVersion
 import com.app.ralaunch.core.model.TouchInputMode
 import com.app.ralaunch.core.platform.runtime.AndroidRendererRegistry
-import com.app.ralaunch.core.ui.dialog.DotNetRuntimeOption
-import com.app.ralaunch.core.ui.dialog.DotNetRuntimeSelectDialog
+import com.app.ralaunch.core.ui.dialog.RuntimeOption
+import com.app.ralaunch.core.ui.dialog.RuntimeSelectDialog
 import com.app.ralaunch.core.ui.dialog.LanguageSelectDialog
 import com.app.ralaunch.core.ui.dialog.LicenseDialog
 import com.app.ralaunch.core.ui.dialog.RendererSelectDialog
@@ -493,7 +494,7 @@ private fun GameSettingsPane(
     viewModel: SettingsViewModel,
     uiState: SettingsUiState
 ) {
-    var showDotNetRuntimeDialog by remember { mutableStateOf(false) }
+    var showRuntimeDialog by remember { mutableStateOf(false) }
     var showRendererDialog by remember { mutableStateOf(false) }
     val availableRenderers = remember { buildRendererOptions() }
     val qualityOptions = listOf(
@@ -508,33 +509,19 @@ private fun GameSettingsPane(
         FpsLimit.FPS_60 to androidStringResource(R.string.settings_fps_60)
     )
     with(uiState) {
-        // 运行时列表：CoreCLR 各版本 + Mono（Mono 用 "mono:<版本>" 标识）
-        val runtimeOptions = remember(installedDotNetRuntimeVersions, installedMonoRuntimeVersions) {
-            buildList {
-                installedDotNetRuntimeVersions.forEach { version ->
-                    add(DotNetRuntimeOption(version = version, description = "CoreCLR"))
-                }
-                installedMonoRuntimeVersions.forEach { version ->
-                    add(
-                        DotNetRuntimeOption(
-                            version = RuntimeSpec.encodeMono(version),
-                            description = "Mono"
-                        )
-                    )
-                }
+        // 运行时列表：仅 Mono（用 "mono:<版本>" 标识，兼容旧设置）
+        val runtimeOptions = remember(installedMonoRuntimeVersions) {
+            installedMonoRuntimeVersions.map { version ->
+                RuntimeOption(
+                    version = RuntimeSpec.encodeMono(version),
+                    description = "Mono"
+                )
             }
         }
-        val currentRuntimeOption: String? =
-            if (selectedRuntimeEngine == RuntimeSpec.ENGINE_MONO) {
-                val monoVersion = selectedMonoRuntimeVersion
-                    ?.takeIf { it in installedMonoRuntimeVersions }
-                    ?: installedMonoRuntimeVersions.firstOrNull()
-                monoVersion?.let { RuntimeSpec.encodeMono(it) }
-            } else {
-                selectedDotNetRuntimeVersion
-                    ?.takeIf { it in installedDotNetRuntimeVersions }
-                    ?: installedDotNetRuntimeVersions.firstOrNull()
-            }
+        val currentMonoVersion = selectedMonoRuntimeVersion
+            ?.takeIf { it in installedMonoRuntimeVersions }
+            ?: installedMonoRuntimeVersions.firstOrNull()
+        val currentRuntimeOption: String? = currentMonoVersion?.let { RuntimeSpec.encodeMono(it) }
         val currentFpsName = fpsOptions.find { it.first == targetFps }?.second
             ?: androidStringResource(R.string.settings_fps_unlimited)
 
@@ -585,20 +572,46 @@ private fun GameSettingsPane(
                     icon = Icons.Default.Storage,
                     onClick = {
                         if (runtimeOptions.isNotEmpty()) {
-                            showDotNetRuntimeDialog = true
+                            showRuntimeDialog = true
                         }
                     }
                 )
 
                 SettingsDivider()
 
-                // RAL: SDL2/3 版本选择。两套都使用 Android 视频后端和各自的 Java 胶水层。
-                SdlVersionSettingItem(
-                    title = androidStringResource(R.string.settings_sdl_version_title),
-                    subtitle = androidStringResource(R.string.settings_sdl_version_subtitle),
-                    icon = Icons.Default.Layers,
-                    selectedVersion = selectedSdlVersion,
-                    onVersionSelected = { viewModel.onEvent(SettingsEvent.SetSdlVersion(it)) }
+                SwitchSettingItem(
+                    title = androidStringResource(R.string.settings_mono_gc_tuning_title),
+                    subtitle = androidStringResource(R.string.settings_mono_gc_tuning_subtitle),
+                    icon = Icons.Default.Memory,
+                    checked = monoGcTuningEnabled,
+                    onCheckedChange = { viewModel.onEvent(SettingsEvent.SetMonoGcTuningEnabled(it)) }
+                )
+
+                if (monoGcTuningEnabled) {
+                    SettingsDivider()
+
+                    ClickableSettingItem(
+                        title = androidStringResource(R.string.settings_mono_gc_nursery_title),
+                        subtitle = androidStringResource(R.string.settings_mono_gc_nursery_subtitle),
+                        value = "${monoGcNurserySizeMb} MB",
+                        icon = Icons.Default.Tune,
+                        onClick = {
+                            val sizes = listOf(64, 128, 256)
+                            val next = sizes[(sizes.indexOf(monoGcNurserySizeMb).takeIf { it >= 0 } ?: 1)
+                                .let { (it + 1) % sizes.size }]
+                            viewModel.onEvent(SettingsEvent.SetMonoGcNurserySizeMb(next))
+                        }
+                    )
+                }
+
+                SettingsDivider()
+
+                SwitchSettingItem(
+                    title = androidStringResource(R.string.settings_mono_aggressive_jit_title),
+                    subtitle = androidStringResource(R.string.settings_mono_aggressive_jit_subtitle),
+                    icon = Icons.Default.Bolt,
+                    checked = monoAggressiveJitEnabled,
+                    onCheckedChange = { viewModel.onEvent(SettingsEvent.SetMonoAggressiveJitEnabled(it)) }
                 )
 
                 SettingsDivider()
@@ -609,6 +622,16 @@ private fun GameSettingsPane(
                     icon = Icons.Default.Build,
                     checked = monoLlvmEnabled,
                     onCheckedChange = { viewModel.onEvent(SettingsEvent.SetMonoLlvmEnabled(it)) }
+                )
+
+                SettingsDivider()
+
+                SwitchSettingItem(
+                    title = androidStringResource(R.string.settings_mono_first_launch_resolution_title),
+                    subtitle = androidStringResource(R.string.settings_mono_first_launch_resolution_subtitle),
+                    icon = Icons.Default.AspectRatio,
+                    checked = monoFixFirstLaunchResolution,
+                    onCheckedChange = { viewModel.onEvent(SettingsEvent.SetMonoFixFirstLaunchResolution(it)) }
                 )
 
                 SettingsDivider()
@@ -690,15 +713,15 @@ private fun GameSettingsPane(
             }
         }
 
-        if (showDotNetRuntimeDialog) {
-            DotNetRuntimeSelectDialog(
+        if (showRuntimeDialog) {
+            RuntimeSelectDialog(
                 currentRuntimeVersion = currentRuntimeOption,
                 runtimes = runtimeOptions,
                 onSelect = { spec ->
-                    viewModel.onEvent(SettingsEvent.SetRuntimeSpec(spec))
-                    showDotNetRuntimeDialog = false
+                    viewModel.onEvent(SettingsEvent.SetMonoRuntimeVersion(spec))
+                    showRuntimeDialog = false
                 },
-                onDismiss = { showDotNetRuntimeDialog = false }
+                onDismiss = { showRuntimeDialog = false }
             )
         }
 
@@ -1090,46 +1113,6 @@ private fun DeveloperSettingsPane(
                     icon = Icons.Default.Audiotrack,
                     checked = lowLatencyAudioEnabled,
                     onCheckedChange = { viewModel.onEvent(SettingsEvent.SetLowLatencyAudio(it)) }
-                )
-            }
-
-            SettingsSection(title = androidStringResource(R.string.settings_developer_dotnet_section)) {
-                SwitchSettingItem(
-                    title = androidStringResource(R.string.settings_developer_server_gc_title),
-                    subtitle = androidStringResource(R.string.settings_developer_server_gc_subtitle),
-                    icon = Icons.Default.Storage,
-                    checked = serverGCEnabled,
-                    onCheckedChange = { viewModel.onEvent(SettingsEvent.SetServerGC(it)) }
-                )
-
-                SettingsDivider()
-
-                SwitchSettingItem(
-                    title = androidStringResource(R.string.settings_developer_concurrent_gc_title),
-                    subtitle = androidStringResource(R.string.settings_developer_concurrent_gc_subtitle),
-                    icon = Icons.Default.Sync,
-                    checked = concurrentGCEnabled,
-                    onCheckedChange = { viewModel.onEvent(SettingsEvent.SetConcurrentGC(it)) }
-                )
-
-                SettingsDivider()
-
-                SwitchSettingItem(
-                    title = androidStringResource(R.string.settings_developer_tiered_compilation_title),
-                    subtitle = androidStringResource(R.string.settings_developer_tiered_compilation_subtitle),
-                    icon = Icons.Default.Layers,
-                    checked = tieredCompilationEnabled,
-                    onCheckedChange = { viewModel.onEvent(SettingsEvent.SetTieredCompilation(it)) }
-                )
-
-                SettingsDivider()
-
-                SwitchSettingItem(
-                    title = androidStringResource(R.string.settings_developer_coreclr_compat_title),
-                    subtitle = androidStringResource(R.string.settings_developer_coreclr_compat_subtitle),
-                    icon = Icons.Default.Security,
-                    checked = coreClrXiaomiCompatEnabled,
-                    onCheckedChange = { viewModel.onEvent(SettingsEvent.SetCoreClrXiaomiCompat(it)) }
                 )
             }
 

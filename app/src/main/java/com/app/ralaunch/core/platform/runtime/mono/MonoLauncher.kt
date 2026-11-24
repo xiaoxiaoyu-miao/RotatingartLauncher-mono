@@ -103,9 +103,16 @@ object MonoLauncher {
             return -1
         }
 
-        // mono 在初始化早期会读取 MONO_PATH 查找 BCL 程序集
+        // mono 在初始化早期会读取 MONO_PATH 查找 BCL 程序集。
+        // 同时把游戏目录加入搜索路径：Mono 解析游戏依赖（FNA/ReLogic/ModLoader 等）
+        // 时先走 MONO_PATH，能避免大量 AssemblyResolve 失败后的回退扫描。
+        val gameDir = File(assemblyPath).parentFile?.absolutePath.orEmpty()
+        val monoPath = listOf(bclDir, gameDir)
+            .filter { it.isNotBlank() }
+            .distinct()
+            .joinToString(File.pathSeparator)
         EnvVarsManager.quickSetEnvVars(
-            "MONO_PATH" to bclDir,
+            "MONO_PATH" to monoPath,
             "MONO_GAC_PREFIX" to monoRoot
         )
 
@@ -272,10 +279,14 @@ object MonoLauncher {
     }
 
     /**
-     * 应用设置里的 Mono 可选环境变量
+     * 应用设置里的 Mono 优化项。
      *
-     * - 启用 LLVM：MONO_ENV_OPTIONS=--llvm，让 Mono JIT 走 LLVM 后端
-     * - 启用详细日志：MONO_LOG_LEVEL=debug + MONO_LOG_MASK=all
+     * - LLVM：MONO_ENV_OPTIONS=--llvm
+     * - 激进 JIT：aggressive-inlining / alias-analysis / unsafe
+     * - GC 调优：大 nursery + 并发并行 major GC
+     * - 详细日志：MONO_LOG_LEVEL=debug + MONO_LOG_MASK=all
+     *
+     * 每项都先检查环境里是否已有值（游戏级 gameEnvVars 优先级更高）。
      */
     private fun applyMonoRuntimeEnvVars() {
         val settings = try {
@@ -288,30 +299,61 @@ object MonoLauncher {
         } ?: return
 
         val llvmEnabled = settings.monoLlvmEnabled
+        val aggressiveJit = settings.monoAggressiveJitEnabled
+        val gcTuning = settings.monoGcTuningEnabled
+        // SGen 要求 nursery size 是 2 的幂；旧设置或手改值在这里兜底。
+        val nurseryMb = settings.monoGcNurserySizeMb
+            .takeIf { it in 32..256 }
+            ?.let { Integer.highestOneBit(it) }
+            ?: 128
         val verboseLogging = settings.monoVerboseLoggingEnabled
 
-        AppLog.i(TAG, "Mono 环境变量 / Mono env: llvm=$llvmEnabled, verboseLog=$verboseLogging")
-
-        EnvVarsManager.quickSetEnvVars(
-            "MONO_ENV_OPTIONS" to if (llvmEnabled) "--llvm" else null,
-            "MONO_LOG_LEVEL" to if (verboseLogging) "debug" else null,
-            "MONO_LOG_MASK" to if (verboseLogging) "all" else null
+        AppLog.i(
+            TAG,
+            "Mono 优化 / Mono tuning: llvm=$llvmEnabled, aggressiveJit=$aggressiveJit, " +
+                "gcTuning=$gcTuning, nursery=${nurseryMb}M, verboseLog=$verboseLogging"
         )
 
-        // RAL: SGen 默认 nursery 只有 4MB，游戏里一帧分配量稍大就触发 minor GC，
-        // 表现为「一段一段地卡」（每次卡一小下）。这里放大 nursery 并让 major GC
-        // 走并发 + 并行标记，明显减少停顿；用户/游戏的 gameEnvVars 里已经指定时以他们为准。
-        //   - nursery-size：越大 minor GC 越少（进世界/保存时的大块分配不会再几帧一次回收）
-        //   - minor=split：每线程独立 nursery，多核（8 Elite）上分配不再抢同一把锁
-        //   - concurrent-sweep：清扫与程序并发，缩短 major GC 的停顿
-        //   - major=marksweep-conc-par：major 标记并发 + 并行
+        val currentEnvOptions = System.getenv("MONO_ENV_OPTIONS")?.trim().orEmpty()
+        if (currentEnvOptions.isEmpty()) {
+            val options = buildList {
+                if (llvmEnabled) add("--llvm")
+                if (aggressiveJit) {
+                    add("--optimize=aggressive-inlining")
+                    add("--optimize=alias-analysis")
+                    // 去掉边界检查，游戏这种可信程序集能拿到最直接的收益。
+                    add("--optimize=unsafe")
+                }
+            }
+            if (options.isNotEmpty()) {
+                val value = options.joinToString(" ")
+                EnvVarsManager.quickSetEnvVar("MONO_ENV_OPTIONS", value)
+                AppLog.i(TAG, "MONO_ENV_OPTIONS = $value")
+            }
+        } else {
+            AppLog.i(TAG, "MONO_ENV_OPTIONS 已由外部设置: $currentEnvOptions")
+        }
+
         val currentGcParams = System.getenv("MONO_GC_PARAMS")?.trim().orEmpty()
-        if (currentGcParams.isEmpty()) {
-            val gcParams = "major=marksweep-conc-par,nursery-size=128M"
+        if (currentGcParams.isEmpty() && gcTuning) {
+            // SGen 默认 nursery 只有 4MB，游戏里一帧分配量稍大就触发 minor GC，
+            // 表现为「一段一段地卡」。放大 nursery 并让 major GC 走并发 + 并行标记，
+            // 明显减少停顿。
+            //   - nursery-size：越大 minor GC 越少
+            //   - major=marksweep-conc-par：major 标记并发 + 并行
+            val gcParams = "major=marksweep-conc-par,nursery-size=${nurseryMb}M"
             EnvVarsManager.quickSetEnvVar("MONO_GC_PARAMS", gcParams)
             AppLog.i(TAG, "MONO_GC_PARAMS = $gcParams")
-        } else {
+        } else if (currentGcParams.isNotEmpty()) {
             AppLog.i(TAG, "MONO_GC_PARAMS 已由外部设置: $currentGcParams")
+        }
+
+        val currentLogLevel = System.getenv("MONO_LOG_LEVEL")?.trim().orEmpty()
+        if (verboseLogging && currentLogLevel.isEmpty()) {
+            EnvVarsManager.quickSetEnvVars(
+                "MONO_LOG_LEVEL" to "debug",
+                "MONO_LOG_MASK" to "all"
+            )
         }
 
         // 注：minor=split / concurrent-sweep / MONO_THREADS_SUSPEND=coop 在这份 mono

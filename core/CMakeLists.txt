@@ -33,7 +33,6 @@ include(cmake/Sdl2CompatOptions.cmake)
 include(cmake/FaudioOptions.cmake)
 include(cmake/Fna3dOptions.cmake)
 
-add_subdirectory(${LIBS_DIR}/dotnethost)
 # FMOD_SDL 是 SDL2 时代的桥接库（源码 include <SDL.h>），SDL3 分支已不需要，
 # 且 AGP 会无视 EXCLUDE_FROM_ALL 强制构建它，故整体不注册该子目录。
 # add_subdirectory(${LIBS_DIR}/FMOD_SDL_BUILD_DEPS)
@@ -57,8 +56,6 @@ add_library(${CMAKE_PROJECT_NAME} SHARED
         src/logger.cpp
         src/jni_entry.cpp
         src/osm_renderer.cpp
-        src/dotnet/corehost_hooks.cpp
-        src/dotnet/dotnet_launcher.cpp
         src/mono/mono_launcher.cpp
         src/sdl/sdl_entry.cpp
         src/sdl/sdl_input_bridge_extend.cpp
@@ -79,7 +76,6 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
         # 在 GameLauncher 预载之前就 System.loadLibrary("main")，于是直接 dlopen 失败：
         #   library "libFAudio.so" not found: needed by libmain.so
         mojoshader
-        dotnethost
         dobby
         spdlog::spdlog
         ${CXX_SHARED_LIB}
@@ -89,7 +85,6 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
         ${SDL_SOURCE_DIR}/include
         ${FNA3D_SOURCE_DIR}/include
-        ${DOTNETHOST_SOURCE_DIR}/include
         ${CMAKE_SOURCE_DIR}/liblinkernsbypass
         ${CMAKE_CURRENT_SOURCE_DIR}
         includes
@@ -114,7 +109,7 @@ set_target_properties(FAudio-shared PROPERTIES OUTPUT_NAME "FAudio_sdl3" NO_SONA
 target_link_options(FAudio-shared PRIVATE "-Wl,-soname,libFAudio.so")
 
 # fmod_SDL 是 SDL2 时代的桥接库（include <SDL.h>），SDL3 分支不再使用，已移除
-install(TARGETS SDL3-shared FAudio-shared FNA3D dotnethost
+install(TARGETS SDL3-shared FAudio-shared FNA3D
         DESTINATION lib)
 
 install(TARGETS GL_gl4es EGL_gl4es

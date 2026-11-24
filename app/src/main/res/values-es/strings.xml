@@ -89,7 +89,7 @@
     <string name="cancel">Cancelar</string>
 
     <!-- Runtime -->
-    <string name="runtime_selector_title">Versión de .NET Runtime</string>
+    <string name="runtime_selector_title">Versión de Mono Runtime</string>
     <string name="runtime_version_latest">Última - Recomendada</string>
     <string name="runtime_version_lts">Soporte a largo plazo (LTS)</string>
     <string name="runtime_changed">Cambiado a .NET %s</string>
@@ -319,7 +319,7 @@
     <string name="control_edit_delete">Eliminar</string>
 
     <!-- Mensajes de MainActivity -->
-    <string name="main_runtime_switched">Cambiado a .NET %s</string>
+    <string name="main_runtime_switched">Cambiado a %s</string>
     <string name="main_select_game_first">Por favor selecciona un juego primero</string>
     <string name="main_shortcut_removed">Acceso directo eliminado de la lista</string>
     <string name="main_game_deleted">Juego y archivos eliminados</string>
@@ -910,7 +910,7 @@
     <string name="main_runtime_title">.NET Runtime</string>
     
     <!-- Diálogo Selector de Runtime -->
-    <string name="runtime_selector_title_text">Versión de .NET Runtime</string>
+    <string name="runtime_selector_title_text">Versión de Mono Runtime</string>
     <string name="runtime_current_version">Versión actual</string>
     <string name="runtime_select_version">Seleccionar versión</string>
     <string name="runtime_not_installed">No instalado</string>

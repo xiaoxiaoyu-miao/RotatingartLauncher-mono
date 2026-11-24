@@ -48,7 +48,7 @@ android {
     externalNativeBuild {
         cmake {
             path = file("../core/CMakeLists.txt")
-            version = if (useLocalToolchain) "3.30.5" else "3.22.1"
+            version = "4.4.5"
         }
     }
 
@@ -130,8 +130,7 @@ android {
         jniLibs {
             useLegacyPackaging = true
             pickFirsts += listOf(
-                "lib/arm64-v8a/libc++_shared.so",
-                "lib/arm64-v8a/libdotnethost.so"
+                "lib/arm64-v8a/libc++_shared.so"
             )
         }
     }

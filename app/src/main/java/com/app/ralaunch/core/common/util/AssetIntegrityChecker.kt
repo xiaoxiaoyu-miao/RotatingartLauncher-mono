@@ -5,6 +5,7 @@ import com.app.ralaunch.R
 import com.app.ralaunch.core.di.contract.IRuntimeManagerServiceV2
 import com.app.ralaunch.core.logging.AppLog
 import com.app.ralaunch.core.platform.AppConstants
+import com.app.ralaunch.core.platform.runtime.RuntimeSpec
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.koin.java.KoinJavaComponent
@@ -12,8 +13,8 @@ import java.io.File
 
 /**
  * 资产完整性检查器
- * 
- * 检查初始化解压的库和资产文件是否完整，防止游戏启动失败。
+ *
+ * 检查初始化解压的 Mono BCL 是否完整，防止游戏启动失败。
  */
 object AssetIntegrityChecker {
 
@@ -56,14 +57,13 @@ object AssetIntegrityChecker {
 
     /**
      * 需要检查的关键组件列表
-     * 
-     * 注意：当前 dotnet 资产包不再包含 apphost，完整性改为检查
-     * host/fxr/<version>/libhostfxr.so 与 shared/Microsoft.NETCore.App/<version>/ 结构。
      */
     private val CRITICAL_COMPONENTS = listOf(
         CriticalComponent(
-            nameResId = R.string.asset_check_component_dotnet_runtime,
-            dirName = "${AppConstants.Dirs.RUNTIMES}/dotnet"
+            nameResId = R.string.init_component_mono_desc,
+            dirName = "${AppConstants.Dirs.RUNTIMES}/mono/${RuntimeSpec.MONO_DEFAULT_VERSION}/bcl",
+            criticalFiles = listOf("mscorlib.dll", "System.dll"),
+            minSizeBytes = 100_000
         )
     )
 
@@ -76,31 +76,31 @@ object AssetIntegrityChecker {
 
         AppLog.i(TAG, "开始资产完整性检查...")
 
-        // 1. 检查关键组件目录
+        // 检查关键组件目录
         for (component in CRITICAL_COMPONENTS) {
             val componentName = context.getString(component.nameResId)
             val componentDir = File(filesDir, component.dirName)
-            
+
             if (!componentDir.exists()) {
-                issues.add(CheckResult.Issue(
-                    type = CheckResult.IssueType.DIRECTORY_MISSING,
-                    description = context.getString(R.string.asset_check_issue_directory_missing, componentName),
-                    filePath = componentDir.absolutePath,
-                    canAutoFix = true
-                ))
+                issues.add(
+                    CheckResult.Issue(
+                        type = CheckResult.IssueType.DIRECTORY_MISSING,
+                        description = context.getString(
+                            R.string.asset_check_issue_directory_missing,
+                            componentName
+                        ),
+                        filePath = componentDir.absolutePath,
+                        canAutoFix = true
+                    )
+                )
                 continue
             }
 
-            // 检查关键文件
-            if (component.dirName.endsWith("/dotnet")) {
-                issues.addAll(checkDotNetComponent(context, componentDir, componentName))
-            } else {
-                for (fileName in component.criticalFiles) {
-                    val file = File(componentDir, fileName)
-                    val issue = checkFile(context, file, componentName, component.minSizeBytes)
-                    if (issue != null) {
-                        issues.add(issue)
-                    }
+            for (fileName in component.criticalFiles) {
+                val file = File(componentDir, fileName)
+                val issue = checkFile(context, file, componentName, component.minSizeBytes)
+                if (issue != null) {
+                    issues.add(issue)
                 }
             }
         }
@@ -109,9 +109,9 @@ object AssetIntegrityChecker {
         val summary = if (issues.isEmpty()) {
             context.getString(R.string.asset_check_summary_all_passed)
         } else {
-            val criticalCount = issues.count { 
-                it.type == CheckResult.IssueType.MISSING_FILE || 
-                it.type == CheckResult.IssueType.DIRECTORY_MISSING 
+            val criticalCount = issues.count {
+                it.type == CheckResult.IssueType.MISSING_FILE ||
+                    it.type == CheckResult.IssueType.DIRECTORY_MISSING
             }
             val warningCount = issues.size - criticalCount
             buildString {
@@ -180,11 +180,6 @@ object AssetIntegrityChecker {
 
     /**
      * 自动修复问题
-     * 
-     * @param context Android Context
-     * @param issues 要修复的问题列表
-     * @param progressCallback 进度回调
-     * @return 修复结果
      */
     suspend fun autoFix(
         context: Context,
@@ -276,9 +271,6 @@ object AssetIntegrityChecker {
 
     /**
      * 强制重新安装全部核心资产。
-     *
-     * 当前实现复用自动修复路径：删除已安装组件目录并清除初始化完成标记，
-     * 让下次启动重新进入初始化提取流程。
      */
     suspend fun forceReinstall(context: Context): FixResult {
         val reinstallIssues = CRITICAL_COMPONENTS.map { component ->
@@ -328,132 +320,31 @@ object AssetIntegrityChecker {
     suspend fun getStatusSummary(context: Context): String = withContext(Dispatchers.IO) {
         val sb = StringBuilder()
 
-        // .NET Runtime 状态
-        val dotnetRuntime = runtimeManager().getSelectedRuntime(IRuntimeManagerServiceV2.RuntimeType.DOTNET)
-        val dotnetStatus = if (dotnetRuntime != null && hasValidDotNetLayout(dotnetRuntime.rootPath.toFile())) {
-            val versions = runtimeManager().getInstalledVersions(IRuntimeManagerServiceV2.RuntimeType.DOTNET)
+        val monoRuntime = runtimeManager().getSelectedRuntime(IRuntimeManagerServiceV2.RuntimeType.MONO)
+        val monoStatus = if (monoRuntime != null && hasValidMonoLayout(monoRuntime.rootPath.toFile())) {
+            val versions = runtimeManager().getInstalledVersions(IRuntimeManagerServiceV2.RuntimeType.MONO)
             if (versions.isNotEmpty()) {
                 context.getString(
-                    R.string.asset_check_status_dotnet_installed_versions,
+                    R.string.asset_check_status_mono_installed_versions,
                     versions.joinToString()
                 )
             } else {
-                context.getString(R.string.asset_check_status_dotnet_installed)
+                context.getString(R.string.asset_check_status_mono_installed)
             }
         } else {
-            context.getString(R.string.asset_check_status_dotnet_not_installed)
+            context.getString(R.string.asset_check_status_mono_not_installed)
         }
-        sb.appendLine(dotnetStatus)
+        sb.appendLine(monoStatus)
 
         sb.toString()
     }
 
-    private fun checkDotNetComponent(
-        context: Context,
-        dotnetDir: File,
-        componentName: String
-    ): List<CheckResult.Issue> {
-        val issues = mutableListOf<CheckResult.Issue>()
-        val selectedRuntime = runtimeManager().getSelectedRuntime(IRuntimeManagerServiceV2.RuntimeType.DOTNET)
-        if (selectedRuntime == null) {
-            issues.add(
-                CheckResult.Issue(
-                    type = CheckResult.IssueType.DIRECTORY_MISSING,
-                    description = context.getString(
-                        R.string.asset_check_issue_directory_missing,
-                        "$componentName runtime"
-                    ),
-                    filePath = dotnetDir.absolutePath,
-                    canAutoFix = true
-                )
-            )
-            return issues
+    private fun hasValidMonoLayout(monoDir: File): Boolean {
+        val bcl = File(monoDir, "bcl")
+        return listOf("mscorlib.dll", "System.dll").all { name ->
+            val file = File(bcl, name)
+            file.exists() && file.length() > 100_000
         }
-
-        val runtimeRootPath = selectedRuntime.rootPath
-        val dotnetRuntimeRoot = runtimeRootPath.toFile()
-
-        val hostFxrVersionDir = getHostFxrVersionDir(dotnetRuntimeRoot)
-        val hostFxrLib = hostFxrVersionDir?.let { File(it, "libhostfxr.so") }
-        issues.addIfNotNull(
-            checkFile(
-                context = context,
-                file = hostFxrLib ?: File(dotnetRuntimeRoot, "host/fxr/libhostfxr.so"),
-                componentName = componentName,
-                minSize = 100_000
-            )
-        )
-
-        val runtimeRoot = File(dotnetRuntimeRoot, "shared/Microsoft.NETCore.App")
-        val runtimeVersionDir = getDotNetRuntimeVersionDir(dotnetRuntimeRoot)
-        if (runtimeVersionDir == null) {
-            issues.add(
-                CheckResult.Issue(
-                    type = CheckResult.IssueType.DIRECTORY_MISSING,
-                    description = context.getString(
-                        R.string.asset_check_issue_directory_missing,
-                        "$componentName runtime"
-                    ),
-                    filePath = runtimeRoot.absolutePath,
-                    canAutoFix = true
-                )
-            )
-            return issues
-        }
-
-        listOf(
-            "libcoreclr.so" to 1_000_000L,
-            "libclrjit.so" to 1_000_000L,
-            "libhostpolicy.so" to 100_000L
-        ).forEach { (fileName, minSize) ->
-            issues.addIfNotNull(
-                checkFile(
-                    context = context,
-                    file = File(runtimeVersionDir, fileName),
-                    componentName = componentName,
-                    minSize = minSize
-                )
-            )
-        }
-
-        return issues
-    }
-
-    private fun hasValidDotNetLayout(dotnetDir: File): Boolean {
-        val hostFxrLib = getHostFxrVersionDir(dotnetDir)?.let { File(it, "libhostfxr.so") }
-        if (hostFxrLib == null || !hostFxrLib.exists() || hostFxrLib.length() <= 100_000) {
-            return false
-        }
-
-        val runtimeVersionDir = getDotNetRuntimeVersionDir(dotnetDir) ?: return false
-        return listOf("libcoreclr.so", "libclrjit.so", "libhostpolicy.so").all { fileName ->
-            val file = File(runtimeVersionDir, fileName)
-            file.exists() && file.length() > 0
-        }
-    }
-
-    private fun getDotNetRuntimeVersions(dotnetDir: File): List<String> {
-        val runtimeDir = File(dotnetDir, "shared/Microsoft.NETCore.App")
-        return runtimeDir.listFiles()
-            ?.filter { it.isDirectory }
-            ?.map { it.name }
-            .orEmpty()
-    }
-
-    private fun getDotNetRuntimeVersionDir(dotnetDir: File): File? {
-        return File(dotnetDir, "shared/Microsoft.NETCore.App")
-            .listFiles()
-            ?.firstOrNull { it.isDirectory }
-    }
-
-    private fun getHostFxrVersionDir(dotnetDir: File): File? {
-        return File(dotnetDir, "host/fxr")
-            .listFiles()
-            ?.firstOrNull { it.isDirectory }
-    }
-
-    private fun MutableList<CheckResult.Issue>.addIfNotNull(issue: CheckResult.Issue?) {
-        if (issue != null) add(issue)
     }
 
     private fun runtimeManager(): IRuntimeManagerServiceV2 =

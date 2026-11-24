@@ -1,19 +1,13 @@
 package com.app.ralaunch.core.platform.runtime
 
 /**
- * 运行时标识串（Runtime Spec）
+ * Mono 运行时标识串（Runtime Spec）
  *
- * 用一个字符串同时表达「用哪个 .NET 运行时引擎」和「用哪个版本」，
- * 这样现有的运行时选择对话框只需沿用 `onSelect(version: String)` 单个回调
- * 就能把 CoreCLR 与 Mono 放在同一个列表里。
- *
- * 编码约定：
- * - CoreCLR（原有行为，保持向后兼容）：直接就是版本号，例如 `10.0.1`
- * - Mono：`mono:<版本>`，例如 `mono:4.5`
+ * 这个分支只保留 Mono 运行时。为了兼容旧版本设置里保存的
+ * `mono:<版本>` 或裸版本号，这里仍然提供统一的编解码入口。
  */
 object RuntimeSpec {
 
-    const val ENGINE_DOTNET = "dotnet"
     const val ENGINE_MONO = "mono"
 
     private const val MONO_PREFIX = "$ENGINE_MONO:"
@@ -22,44 +16,33 @@ object RuntimeSpec {
     const val MONO_DEFAULT_VERSION = "4.5"
 
     data class Decoded(
-        val engine: String,
         val version: String
     ) {
-        val isMono: Boolean get() = engine == ENGINE_MONO
-    }
-
-    /** 把引擎与版本编码成运行时标识串 */
-    fun encode(engine: String, version: String): String {
-        val normalizedVersion = version.trim()
-        return if (engine == ENGINE_MONO) "$MONO_PREFIX$normalizedVersion" else normalizedVersion
+        /** 该分支只支持 Mono；保留字段便于旧调用方平滑迁移。 */
+        val isMono: Boolean get() = true
     }
 
     /** 编码一个 Mono 运行时标识串 */
-    fun encodeMono(version: String = MONO_DEFAULT_VERSION): String = encode(ENGINE_MONO, version)
+    fun encodeMono(version: String = MONO_DEFAULT_VERSION): String =
+        "$MONO_PREFIX${version.trim().ifBlank { MONO_DEFAULT_VERSION }}"
 
     /**
      * 解析运行时标识串。
-     * 无法识别时按 CoreCLR 处理，保证旧设置值继续可用。
+     * 兼容旧格式（裸版本号、`mono:<版本>`），未知值回落到默认 Mono 版本。
      */
     fun decode(spec: String?): Decoded {
         val raw = spec?.trim().orEmpty()
-        if (raw.startsWith(MONO_PREFIX, ignoreCase = true)) {
-            val version = raw.substring(MONO_PREFIX.length).trim().ifBlank { MONO_DEFAULT_VERSION }
-            return Decoded(ENGINE_MONO, version)
-        }
-        return Decoded(ENGINE_DOTNET, raw)
+        val version = when {
+            raw.startsWith(MONO_PREFIX, ignoreCase = true) ->
+                raw.substring(MONO_PREFIX.length).trim()
+            else -> raw
+        }.ifBlank { MONO_DEFAULT_VERSION }
+        return Decoded(version)
     }
 
-    /** 判断标识串是否指向 Mono */
-    fun isMono(spec: String?): Boolean = decode(spec).isMono
+    /** 判断标识串是否指向 Mono（在此分支中恒为 true）。 */
+    fun isMono(spec: String?): Boolean = true
 
     /** 展示用名称 */
-    fun displayName(spec: String?): String {
-        val decoded = decode(spec)
-        return if (decoded.isMono) {
-            "Mono ${decoded.version}"
-        } else {
-            decoded.version
-        }
-    }
+    fun displayName(spec: String?): String = "Mono ${decode(spec).version}"
 }

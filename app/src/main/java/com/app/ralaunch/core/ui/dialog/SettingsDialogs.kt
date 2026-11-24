@@ -137,7 +137,7 @@ data class RendererOption(
     val description: String
 )
 
-data class DotNetRuntimeOption(
+data class RuntimeOption(
     val version: String,
     val description: String? = null
 )
@@ -230,9 +230,9 @@ fun RendererSelectDialog(
 }
 
 @Composable
-fun DotNetRuntimeSelectDialog(
+fun RuntimeSelectDialog(
     currentRuntimeVersion: String?,
-    runtimes: List<DotNetRuntimeOption>,
+    runtimes: List<RuntimeOption>,
     onSelect: (String) -> Unit,
     onDismiss: () -> Unit
 ) {

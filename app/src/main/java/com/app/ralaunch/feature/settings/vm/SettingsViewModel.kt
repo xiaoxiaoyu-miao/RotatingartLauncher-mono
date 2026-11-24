@@ -8,7 +8,6 @@ import com.app.ralaunch.core.logging.LogEntry
 import com.app.ralaunch.feature.settings.model.LogViewerState
 import com.app.ralaunch.core.platform.runtime.RendererRegistry
 import com.app.ralaunch.core.platform.runtime.RuntimeSpec
-import com.app.ralaunch.core.platform.runtime.SdlVersion
 import com.app.ralaunch.core.model.BackgroundType
 import com.app.ralaunch.core.model.FpsLimit
 import com.app.ralaunch.core.model.QualityLevel
@@ -61,15 +60,14 @@ data class SettingsUiState(
     val lowLatencyAudioEnabled: Boolean = false,
     val ralAudioBufferSize: Int? = null,
     val rendererType: String = DEFAULT_RENDERER_ID,
-    val selectedDotNetRuntimeVersion: String? = null,
-    val installedDotNetRuntimeVersions: List<String> = emptyList(),
-    val selectedRuntimeEngine: String = RuntimeSpec.ENGINE_DOTNET,
     val selectedMonoRuntimeVersion: String? = null,
     val installedMonoRuntimeVersions: List<String> = emptyList(),
     val monoLlvmEnabled: Boolean = false,
     val monoVerboseLoggingEnabled: Boolean = false,
-    /** 选中的 SDL 版本（"sdl3"/"sdl2"），见 [SdlVersion] */
-    val selectedSdlVersion: String = SdlVersion.SDL2,
+    val monoGcTuningEnabled: Boolean = true,
+    val monoGcNurserySizeMb: Int = 128,
+    val monoAggressiveJitEnabled: Boolean = true,
+    val monoFixFirstLaunchResolution: Boolean = true,
 
     // 启动器设置
     val multiplayerEnabled: Boolean = false,
@@ -87,10 +85,6 @@ data class SettingsUiState(
     val loggingEnabled: Boolean = false,
     val verboseLogging: Boolean = false,
     val killLauncherUIEnabled: Boolean = false,
-    val serverGCEnabled: Boolean = true,
-    val concurrentGCEnabled: Boolean = true,
-    val tieredCompilationEnabled: Boolean = true,
-    val coreClrXiaomiCompatEnabled: Boolean = false,
     val fnaMapBufferRangeOptEnabled: Boolean = false,
     val fnaGlPerfDiagnosticsEnabled: Boolean = false,
 
@@ -126,11 +120,13 @@ sealed class SettingsEvent {
     data class SetLowLatencyAudio(val enabled: Boolean) : SettingsEvent()
     data class SetRalAudioBufferSize(val size: Int?) : SettingsEvent()
     data class SetRenderer(val renderer: String) : SettingsEvent()
-    data class SetDotNetRuntimeVersion(val version: String) : SettingsEvent()
-    data class SetRuntimeSpec(val spec: String) : SettingsEvent()
+    data class SetMonoRuntimeVersion(val version: String) : SettingsEvent()
     data class SetMonoLlvmEnabled(val enabled: Boolean) : SettingsEvent()
     data class SetMonoVerboseLoggingEnabled(val enabled: Boolean) : SettingsEvent()
-    data class SetSdlVersion(val version: String) : SettingsEvent()
+    data class SetMonoGcTuningEnabled(val enabled: Boolean) : SettingsEvent()
+    data class SetMonoGcNurserySizeMb(val sizeMb: Int) : SettingsEvent()
+    data class SetMonoAggressiveJitEnabled(val enabled: Boolean) : SettingsEvent()
+    data class SetMonoFixFirstLaunchResolution(val enabled: Boolean) : SettingsEvent()
 
     // 启动器
     data class SetMultiplayerEnabled(val enabled: Boolean) : SettingsEvent()
@@ -148,10 +144,6 @@ sealed class SettingsEvent {
     data class SetLoggingEnabled(val enabled: Boolean) : SettingsEvent()
     data class SetVerboseLogging(val enabled: Boolean) : SettingsEvent()
     data class SetKillLauncherUI(val enabled: Boolean) : SettingsEvent()
-    data class SetServerGC(val enabled: Boolean) : SettingsEvent()
-    data class SetConcurrentGC(val enabled: Boolean) : SettingsEvent()
-    data class SetTieredCompilation(val enabled: Boolean) : SettingsEvent()
-    data class SetCoreClrXiaomiCompat(val enabled: Boolean) : SettingsEvent()
     data class SetFnaMapBufferRangeOpt(val enabled: Boolean) : SettingsEvent()
     data class SetFnaGlPerfDiagnostics(val enabled: Boolean) : SettingsEvent()
 }
@@ -269,11 +261,13 @@ class SettingsViewModel(
             is SettingsEvent.SetLowLatencyAudio -> setLowLatencyAudio(event.enabled)
             is SettingsEvent.SetRalAudioBufferSize -> setRalAudioBufferSize(event.size)
             is SettingsEvent.SetRenderer -> setRenderer(event.renderer)
-            is SettingsEvent.SetDotNetRuntimeVersion -> setDotNetRuntimeVersion(event.version)
-            is SettingsEvent.SetRuntimeSpec -> setRuntimeSpec(event.spec)
+            is SettingsEvent.SetMonoRuntimeVersion -> setMonoRuntimeVersion(event.version)
             is SettingsEvent.SetMonoLlvmEnabled -> setMonoLlvmEnabled(event.enabled)
             is SettingsEvent.SetMonoVerboseLoggingEnabled -> setMonoVerboseLoggingEnabled(event.enabled)
-            is SettingsEvent.SetSdlVersion -> setSdlVersion(event.version)
+            is SettingsEvent.SetMonoGcTuningEnabled -> setMonoGcTuningEnabled(event.enabled)
+            is SettingsEvent.SetMonoGcNurserySizeMb -> setMonoGcNurserySizeMb(event.sizeMb)
+            is SettingsEvent.SetMonoAggressiveJitEnabled -> setMonoAggressiveJitEnabled(event.enabled)
+            is SettingsEvent.SetMonoFixFirstLaunchResolution -> setMonoFixFirstLaunchResolution(event.enabled)
 
             // 启动器
             is SettingsEvent.SetMultiplayerEnabled -> setMultiplayerEnabled(event.enabled)
@@ -291,10 +285,6 @@ class SettingsViewModel(
             is SettingsEvent.SetLoggingEnabled -> setLoggingEnabled(event.enabled)
             is SettingsEvent.SetVerboseLogging -> setVerboseLogging(event.enabled)
             is SettingsEvent.SetKillLauncherUI -> setKillLauncherUI(event.enabled)
-            is SettingsEvent.SetServerGC -> setServerGC(event.enabled)
-            is SettingsEvent.SetConcurrentGC -> setConcurrentGC(event.enabled)
-            is SettingsEvent.SetTieredCompilation -> setTieredCompilation(event.enabled)
-            is SettingsEvent.SetCoreClrXiaomiCompat -> setCoreClrXiaomiCompat(event.enabled)
             is SettingsEvent.SetFnaMapBufferRangeOpt -> setFnaMapBufferRangeOpt(event.enabled)
             is SettingsEvent.SetFnaGlPerfDiagnostics -> setFnaGlPerfDiagnostics(event.enabled)
         }
@@ -307,9 +297,6 @@ class SettingsViewModel(
     private fun loadSettings() {
         viewModelScope.launch(Dispatchers.IO) {
             val settings = settingsRepository.getSettingsSnapshot()
-            val installedDotNetRuntimeVersions = runtimeManager.getInstalledVersions(
-                IRuntimeManagerServiceV2.RuntimeType.DOTNET
-            )
             val installedMonoRuntimeVersions = runtimeManager.getInstalledVersions(
                 IRuntimeManagerServiceV2.RuntimeType.MONO
             )
@@ -333,20 +320,16 @@ class SettingsViewModel(
                     lowLatencyAudioEnabled = settings.sdlAaudioLowLatency,
                     ralAudioBufferSize = normalizeRalAudioBufferSize(settings.ralAudioBufferSize),
                     rendererType = RendererRegistry.normalizeRendererId(settings.fnaRenderer),
-                    selectedDotNetRuntimeVersion = settings.selectedDotnetRuntimeVersion
-                        .trim()
-                        .ifBlank { null },
-                    installedDotNetRuntimeVersions = installedDotNetRuntimeVersions,
-                    selectedRuntimeEngine = settings.selectedRuntimeEngine
-                        .trim()
-                        .ifBlank { RuntimeSpec.ENGINE_DOTNET },
                     selectedMonoRuntimeVersion = settings.selectedMonoRuntimeVersion
                         .trim()
                         .ifBlank { null },
                     installedMonoRuntimeVersions = installedMonoRuntimeVersions,
                     monoLlvmEnabled = settings.monoLlvmEnabled,
                     monoVerboseLoggingEnabled = settings.monoVerboseLoggingEnabled,
-                    selectedSdlVersion = SdlVersion.normalize(settings.selectedSdlVersion),
+                    monoGcTuningEnabled = settings.monoGcTuningEnabled,
+                    monoGcNurserySizeMb = settings.monoGcNurserySizeMb,
+                    monoAggressiveJitEnabled = settings.monoAggressiveJitEnabled,
+                    monoFixFirstLaunchResolution = settings.monoFixFirstLaunchResolution,
                     // 启动器
                     multiplayerEnabled = settings.multiplayerEnabled,
                     multiplayerDisclaimerAccepted = settings.multiplayerDisclaimerAccepted,
@@ -360,10 +343,6 @@ class SettingsViewModel(
                     loggingEnabled = settings.logSystemEnabled,
                     verboseLogging = settings.verboseLogging,
                     killLauncherUIEnabled = settings.killLauncherUIAfterLaunch,
-                    serverGCEnabled = settings.serverGC,
-                    concurrentGCEnabled = settings.concurrentGC,
-                    tieredCompilationEnabled = settings.tieredCompilation,
-                    coreClrXiaomiCompatEnabled = settings.coreClrXiaomiCompatEnabled,
                     fnaMapBufferRangeOptEnabled = settings.fnaMapBufferRangeOptimization,
                     fnaGlPerfDiagnosticsEnabled = settings.fnaGlPerfDiagnosticsEnabled,
                     // 关于
@@ -530,16 +509,14 @@ class SettingsViewModel(
         }
     }
 
-    private fun setDotNetRuntimeVersion(version: String) {
-        val normalized = version.trim()
-        if (normalized.isEmpty()) return
-
+    private fun setMonoRuntimeVersion(version: String) {
+        val normalized = RuntimeSpec.decode(version).version
         viewModelScope.launch {
-            settingsRepository.update { selectedDotnetRuntimeVersion = normalized }
-            _uiState.update { it.copy(selectedDotNetRuntimeVersion = normalized) }
+            settingsRepository.update { selectedMonoRuntimeVersion = normalized }
+            _uiState.update { it.copy(selectedMonoRuntimeVersion = normalized) }
             sendEffect(
                 SettingsEffect.ShowToast(
-                    getAppString(R.string.main_runtime_switched, normalized)
+                    getAppString(R.string.main_runtime_switched, RuntimeSpec.displayName(normalized))
                 )
             )
         }
@@ -559,52 +536,38 @@ class SettingsViewModel(
         }
     }
 
-    /**
-     * 切换 SDL 版本（SDL3 / SDL2）。
-     *
-     * 该选择决定游戏启动链走哪套 Activity：
-     *  - SDL3：GameActivity（继承 SDLActivity，Android 视频后端）
-     *  - SDL2：GameActivitySdl2（org.libsdl.app2，Android 视频后端）
-     */
-    private fun setSdlVersion(version: String) {
-        val normalized = SdlVersion.normalize(version)
+    private fun setMonoGcTuningEnabled(enabled: Boolean) {
         viewModelScope.launch {
-            settingsRepository.update { selectedSdlVersion = normalized }
-            _uiState.update { it.copy(selectedSdlVersion = normalized) }
-            sendEffect(SettingsEffect.ShowToast(SdlVersion.displayName(normalized)))
+            settingsRepository.update { monoGcTuningEnabled = enabled }
+            _uiState.update { it.copy(monoGcTuningEnabled = enabled) }
+            sendEffect(SettingsEffect.ShowToast(getAppString(R.string.settings_restart_required_toast)))
         }
     }
 
-    /**
-     * 切换运行时（CoreCLR / Mono）
-     *
-     * spec 为运行时标识串：CoreCLR 直接用版本号，Mono 用 "mono:<版本>"。
-     */
-    private fun setRuntimeSpec(spec: String) {
-        val decoded = RuntimeSpec.decode(spec)
-        if (decoded.version.isEmpty()) return
-
+    private fun setMonoGcNurserySizeMb(sizeMb: Int) {
+        // SGen 的 nursery size 必须是 2 的幂。
+        val normalized = sizeMb.coerceIn(32, 256).let { value ->
+            Integer.highestOneBit(value)
+        }
         viewModelScope.launch {
-            settingsRepository.update {
-                selectedRuntimeEngine = decoded.engine
-                if (decoded.isMono) {
-                    selectedMonoRuntimeVersion = decoded.version
-                } else {
-                    selectedDotnetRuntimeVersion = decoded.version
-                }
-            }
-            _uiState.update {
-                it.copy(
-                    selectedRuntimeEngine = decoded.engine,
-                    selectedMonoRuntimeVersion = if (decoded.isMono) decoded.version else it.selectedMonoRuntimeVersion,
-                    selectedDotNetRuntimeVersion = if (decoded.isMono) it.selectedDotNetRuntimeVersion else decoded.version
-                )
-            }
-            sendEffect(
-                SettingsEffect.ShowToast(
-                    getAppString(R.string.main_runtime_switched, RuntimeSpec.displayName(spec))
-                )
-            )
+            settingsRepository.update { monoGcNurserySizeMb = normalized }
+            _uiState.update { it.copy(monoGcNurserySizeMb = normalized) }
+            sendEffect(SettingsEffect.ShowToast(getAppString(R.string.settings_restart_required_toast)))
+        }
+    }
+
+    private fun setMonoAggressiveJitEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.update { monoAggressiveJitEnabled = enabled }
+            _uiState.update { it.copy(monoAggressiveJitEnabled = enabled) }
+            sendEffect(SettingsEffect.ShowToast(getAppString(R.string.settings_restart_required_toast)))
+        }
+    }
+
+    private fun setMonoFixFirstLaunchResolution(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.update { monoFixFirstLaunchResolution = enabled }
+            _uiState.update { it.copy(monoFixFirstLaunchResolution = enabled) }
         }
     }
 
@@ -717,37 +680,6 @@ class SettingsViewModel(
         viewModelScope.launch {
             settingsRepository.update { killLauncherUIAfterLaunch = enabled }
             _uiState.update { it.copy(killLauncherUIEnabled = enabled) }
-        }
-    }
-
-    private fun setServerGC(enabled: Boolean) {
-        viewModelScope.launch {
-            settingsRepository.update { serverGC = enabled }
-            _uiState.update { it.copy(serverGCEnabled = enabled) }
-            sendEffect(SettingsEffect.ShowToast(getAppString(R.string.settings_restart_required_toast)))
-        }
-    }
-
-    private fun setConcurrentGC(enabled: Boolean) {
-        viewModelScope.launch {
-            settingsRepository.update { concurrentGC = enabled }
-            _uiState.update { it.copy(concurrentGCEnabled = enabled) }
-            sendEffect(SettingsEffect.ShowToast(getAppString(R.string.settings_restart_required_toast)))
-        }
-    }
-
-    private fun setTieredCompilation(enabled: Boolean) {
-        viewModelScope.launch {
-            settingsRepository.update { tieredCompilation = enabled }
-            _uiState.update { it.copy(tieredCompilationEnabled = enabled) }
-            sendEffect(SettingsEffect.ShowToast(getAppString(R.string.settings_restart_required_toast)))
-        }
-    }
-
-    private fun setCoreClrXiaomiCompat(enabled: Boolean) {
-        viewModelScope.launch {
-            settingsRepository.update { coreClrXiaomiCompatEnabled = enabled }
-            _uiState.update { it.copy(coreClrXiaomiCompatEnabled = enabled) }
         }
     }
 

@@ -36,9 +36,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.app.ralaunch.R
-import com.app.ralaunch.core.ui.dialog.DotNetRuntimeOption
+import com.app.ralaunch.core.ui.dialog.RuntimeOption
 import com.app.ralaunch.core.platform.runtime.RuntimeSpec
-import com.app.ralaunch.core.ui.dialog.DotNetRuntimeSelectDialog
+import com.app.ralaunch.core.ui.dialog.RuntimeSelectDialog
 import com.app.ralaunch.core.ui.dialog.RendererOption
 import com.app.ralaunch.core.ui.dialog.RendererSelectDialog
 import com.app.ralaunch.core.model.GameItemUi
@@ -65,57 +65,42 @@ fun GameInfoEditSubScreen(
     }
     var editedRendererOverride by remember(game.id, rendererOptions) { mutableStateOf(initialRendererOverride) }
     var showRendererDialog by remember { mutableStateOf(false) }
-    var editedDotNetRuntimeVersionOverride by remember(game.id) {
-        mutableStateOf(game.dotNetRuntimeVersionOverride?.trim()?.takeIf { it.isNotEmpty() })
+    var editedMonoRuntimeVersionOverride by remember(game.id) {
+        mutableStateOf(game.runtimeVersionOverride?.trim()?.takeIf { it.isNotEmpty() })
     }
-    var showDotNetRuntimeDialog by remember { mutableStateOf(false) }
+    var showMonoRuntimeDialog by remember { mutableStateOf(false) }
 
     val rendererDisplayName = remember(editedRendererOverride, rendererOptions) {
         editedRendererOverride?.let { rendererId ->
             rendererOptions.firstOrNull { it.renderer == rendererId }?.name ?: rendererId
         } ?: ""
     }
-    val installedDotNetRuntimeVersions = runtimeState.installedDotNetRuntimeVersions
-    val globalDotNetRuntimeVersion = runtimeState.globalDotNetRuntimeVersion
     val installedMonoRuntimeVersions = runtimeState.installedMonoRuntimeVersions
 
-    // 全局选中的运行时标识串（CoreCLR 版本号 或 mono:<版本>）
-    val globalRuntimeSpec: String? =
-        if (runtimeState.globalRuntimeEngine == RuntimeSpec.ENGINE_MONO) {
-            RuntimeSpec.encodeMono(
-                runtimeState.globalMonoRuntimeVersion ?: RuntimeSpec.MONO_DEFAULT_VERSION
-            )
-        } else {
-            globalDotNetRuntimeVersion
-        }
+    // 全局选中的 Mono 标识串
+    val globalRuntimeSpec: String = RuntimeSpec.encodeMono(
+        runtimeState.globalMonoRuntimeVersion ?: RuntimeSpec.MONO_DEFAULT_VERSION
+    )
 
-    // 可选运行时：CoreCLR 各版本 + Mono
-    val allRuntimeSpecs = remember(installedDotNetRuntimeVersions, installedMonoRuntimeVersions) {
-        buildList {
-            installedDotNetRuntimeVersions.forEach {
-                add(RuntimeSpec.encode(RuntimeSpec.ENGINE_DOTNET, it))
-            }
-            installedMonoRuntimeVersions.forEach { add(RuntimeSpec.encodeMono(it)) }
-        }
+    // 可选运行时：仅 Mono
+    val allRuntimeSpecs = remember(installedMonoRuntimeVersions) {
+        installedMonoRuntimeVersions.map { RuntimeSpec.encodeMono(it) }
     }
-    val dotNetRuntimeOptions = remember(allRuntimeSpecs) {
+    val monoRuntimeOptions = remember(allRuntimeSpecs) {
         allRuntimeSpecs.map { spec ->
-            DotNetRuntimeOption(
-                version = spec,
-                description = if (RuntimeSpec.isMono(spec)) "Mono" else "CoreCLR"
-            )
+            RuntimeOption(version = spec, description = "Mono")
         }
     }
-    val effectiveDotNetRuntimeVersion = remember(
-        editedDotNetRuntimeVersionOverride,
+    val effectiveMonoRuntimeVersion = remember(
+        editedMonoRuntimeVersionOverride,
         allRuntimeSpecs,
         globalRuntimeSpec
     ) {
-        editedDotNetRuntimeVersionOverride
+        editedMonoRuntimeVersionOverride
             ?.takeIf { it in allRuntimeSpecs }
             ?: globalRuntimeSpec
     }
-    val dotNetRuntimeDisplayName = editedDotNetRuntimeVersionOverride
+    val monoRuntimeDisplayName = editedMonoRuntimeVersionOverride
         ?.let { RuntimeSpec.displayName(it) }
         ?: stringResource(R.string.runtime_follow_global_settings)
 
@@ -207,22 +192,22 @@ fun GameInfoEditSubScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = stringResource(R.string.main_dotnet_runtime_optional),
+                text = stringResource(R.string.main_mono_runtime_optional),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
             )
 
             OutlinedTextField(
-                value = dotNetRuntimeDisplayName,
+                value = monoRuntimeDisplayName,
                 onValueChange = {},
-                label = { Text(stringResource(R.string.main_dotnet_runtime_override)) },
+                label = { Text(stringResource(R.string.main_mono_runtime_override)) },
                 readOnly = true,
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
 
             Text(
-                text = "${stringResource(R.string.runtime_current_version)}: ${effectiveDotNetRuntimeVersion ?: stringResource(R.string.runtime_not_installed)}",
+                text = "${stringResource(R.string.runtime_current_version)}: $effectiveMonoRuntimeVersion",
                 style = MaterialTheme.typography.bodySmall,
                 color = LocalContentColor.current.copy(alpha = 0.7f)
             )
@@ -232,15 +217,15 @@ fun GameInfoEditSubScreen(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 OutlinedButton(
-                    onClick = { editedDotNetRuntimeVersionOverride = null },
+                    onClick = { editedMonoRuntimeVersionOverride = null },
                     modifier = Modifier.weight(1f)
                 ) {
                     Text(stringResource(R.string.runtime_follow_global))
                 }
 
                 Button(
-                    onClick = { showDotNetRuntimeDialog = true },
-                    enabled = dotNetRuntimeOptions.isNotEmpty(),
+                    onClick = { showMonoRuntimeDialog = true },
+                    enabled = monoRuntimeOptions.isNotEmpty(),
                     modifier = Modifier.weight(1f)
                 ) {
                     Text(stringResource(R.string.runtime_select_version))
@@ -262,7 +247,7 @@ fun GameInfoEditSubScreen(
                             displayedName = editedName.trim(),
                             displayedDescription = editedDescription.trim().ifEmpty { null },
                             rendererOverride = editedRendererOverride,
-                            dotNetRuntimeVersionOverride = editedDotNetRuntimeVersionOverride
+                            runtimeVersionOverride = editedMonoRuntimeVersionOverride
                         )
                         onSave(updated)
                         onBack()
@@ -287,14 +272,14 @@ fun GameInfoEditSubScreen(
         )
     }
 
-    if (showDotNetRuntimeDialog) {
-        DotNetRuntimeSelectDialog(
-            currentRuntimeVersion = editedDotNetRuntimeVersionOverride,
-            runtimes = dotNetRuntimeOptions,
+    if (showMonoRuntimeDialog) {
+        RuntimeSelectDialog(
+            currentRuntimeVersion = editedMonoRuntimeVersionOverride,
+            runtimes = monoRuntimeOptions,
             onSelect = { version ->
-                editedDotNetRuntimeVersionOverride = version
+                editedMonoRuntimeVersionOverride = version
             },
-            onDismiss = { showDotNetRuntimeDialog = false }
+            onDismiss = { showMonoRuntimeDialog = false }
         )
     }
 }

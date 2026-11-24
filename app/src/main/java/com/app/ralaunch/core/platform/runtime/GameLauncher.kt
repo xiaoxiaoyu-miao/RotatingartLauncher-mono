@@ -8,10 +8,10 @@
  *
  * 支持的游戏类型：
  * Supported game types:
- * - .NET/FNA 游戏（通过 CoreCLR 运行时）
- *   .NET/FNA games (via CoreCLR runtime)
+ * - Mono/FNA 游戏（通过内置 Mono 运行时）
+ *   Mono/FNA games (via the bundled Mono runtime)
  *
- * @see DotNetLauncher .NET 运行时启动器 / .NET runtime launcher
+ * @see MonoLauncher Mono 运行时启动器 / Mono runtime launcher
  */
 package com.app.ralaunch.core.platform.runtime
 
@@ -21,8 +21,8 @@ import java.io.File
 import com.app.ralaunch.core.common.SettingsAccess
 import com.app.ralaunch.core.model.TouchInputMode
 import org.koin.java.KoinJavaComponent
-import com.app.ralaunch.core.platform.runtime.dotnet.DotNetLauncher
 import com.app.ralaunch.core.platform.runtime.mono.MonoLauncher
+import com.app.ralaunch.core.platform.runtime.mono.MonoFirstLaunchConfig
 import com.app.ralaunch.core.di.contract.ISettingsRepositoryServiceV2
 import com.app.ralaunch.core.logging.AppLog
 import com.app.ralaunch.core.common.util.NativeMethods
@@ -94,41 +94,18 @@ object GameLauncher {
      * - SkiaSharp: 2D 图形库 / 2D graphics library
      */
     init {
-        // RAL: 依据「SDL 版本」设置决定加载哪套 SDL。GameLauncher 在 :game 进程内运行，
-        // 真正的 SDL2 与 SDL3 的 SDL2 兼容层必须互斥加载。
-        // SDL2 Android 路径使用独立的 SDL2 Java 胶水层和系统图形栈。
-        val useSdl2 = runCatching { SdlVersion.isSdl2(SettingsAccess.runtimeSdlVersion) }
-            .getOrDefault(false)
         try {
             System.loadLibrary("fmodL")
             System.loadLibrary("fmod")
             System.loadLibrary("fmodstudioL")
             System.loadLibrary("fmodstudio")
-            System.loadLibrary("dotnethost")
             System.loadLibrary("theorafile")
-            if (useSdl2) {
-                // RAL: SDL2 路径使用「从源码编译的 SDL2 版」FAudio/FNA3D：
-                //   core/libs/{FAudio,FNA3D} + -DBUILD_SDL3=OFF + 官方 androidbuildlibs 构建的
-                //   libSDL2.so（scripts/sdl2/build-fna-sdl2.sh / build-sdl2.sh）。
-                // 包内不存在名为 libFNA3D.so / libFAudio.so 的文件（两套都以 _sdl2/_sdl3 命名，
-                // SONAME 统一为 libFNA3D.so / libFAudio.so），而游戏侧 P/Invoke 是
-                // dlopen("libFNA3D.so")：bionic 按文件名找不到文件时会回退到「已加载库的
-                // SONAME 匹配」，因此这里预载哪一套就生效哪一套。
-                // SDL2 先由这里显式加载，确保 Android 执行 SDL 的 JNI_OnLoad。
-                // Load SDL2 directly before libraries that list it as DT_NEEDED.
-                // Android may skip SDL's JNI_OnLoad for an indirect dependency,
-                // leaving JavaVM unset when SDL initializes touch input.
-                System.loadLibrary("SDL2")
-                System.loadLibrary("FAudio_sdl2")
-                System.loadLibrary("FNA3D_sdl2")
-            } else {
-                // SDL3 版同样以 _sdl3 命名，理由见上（游戏侧按 SONAME 命中已加载的这份）
-                System.loadLibrary("SDL3")
-                System.loadLibrary("SDL2_compat")
-                System.loadLibrary("FAudio_sdl3")
-                System.loadLibrary("FNA3D_sdl3")
-                AppLog.i(TAG, "SDL3 runtime with sdl2-compat loaded for SDL2 API consumers")
-            }
+            // SDL3 + 兼容旧 FNA 的 sdl2-compat 层。
+            System.loadLibrary("SDL3")
+            System.loadLibrary("SDL2_compat")
+            System.loadLibrary("FAudio_sdl3")
+            System.loadLibrary("FNA3D_sdl3")
+            AppLog.i(TAG, "SDL3 runtime with sdl2-compat loaded for SDL2 API consumers")
             System.loadLibrary("main")
             System.loadLibrary("openal32")
             System.loadLibrary("lwjgl_lz4")
@@ -140,12 +117,6 @@ object GameLauncher {
     }
 
     /**
-     * 记录最后一次实际使用的运行时引擎，供 [getLastErrorMessage] 取对应错误
-     */
-    @Volatile
-    private var lastUsedEngine: String = RuntimeSpec.ENGINE_DOTNET
-
-    /**
      * 通过 Koin 取设置仓库（懒加载，避免启动期无 Koin 环境时崩溃）
      */
     private val settingsRepository: ISettingsRepositoryServiceV2 by lazy {
@@ -153,30 +124,24 @@ object GameLauncher {
     }
 
     /**
-     * 解析本次启动要使用的运行时标识串
+     * 解析本次启动要使用的 Mono 版本。
      *
-     * 优先使用条目级覆盖（游戏单独指定），否则回退到全局设置里选中的引擎与版本。
+     * 优先使用条目级覆盖（游戏单独指定），否则回退到全局设置里选中的 Mono 版本。
      */
-    private fun resolveRuntimeSpec(override: String?): String {
+    private fun resolveMonoVersion(override: String?): String {
         val normalizedOverride = override?.trim()?.takeIf { it.isNotEmpty() }
         if (normalizedOverride != null) {
-            AppLog.i(TAG, "使用游戏级运行时覆盖 / Per-game runtime override: $normalizedOverride")
-            return normalizedOverride
+            AppLog.i(TAG, "使用游戏级 Mono 运行时覆盖 / Per-game Mono override: $normalizedOverride")
+            return RuntimeSpec.decode(normalizedOverride).version
         }
 
         return try {
-            val settings = settingsRepository.Settings
-            val engine = settings.selectedRuntimeEngine.trim().ifBlank { RuntimeSpec.ENGINE_DOTNET }
-            if (engine == RuntimeSpec.ENGINE_MONO) {
-                val version = settings.selectedMonoRuntimeVersion.trim()
-                    .ifBlank { RuntimeSpec.MONO_DEFAULT_VERSION }
-                RuntimeSpec.encodeMono(version)
-            } else {
-                settings.selectedDotnetRuntimeVersion.trim()
-            }
+            val version = settingsRepository.Settings.selectedMonoRuntimeVersion.trim()
+                .ifBlank { RuntimeSpec.MONO_DEFAULT_VERSION }
+            RuntimeSpec.decode(version).version
         } catch (e: Exception) {
-            AppLog.w(TAG, "读取全局运行时设置失败，回退到 CoreCLR / Failed to read global runtime settings", e)
-            ""
+            AppLog.w(TAG, "读取全局 Mono 运行时设置失败，回退到默认版本", e)
+            RuntimeSpec.MONO_DEFAULT_VERSION
         }
     }
 
@@ -187,13 +152,7 @@ object GameLauncher {
      * @return 错误信息字符串，如果没有错误则返回空字符串
      *         Error message string, or empty string if no error
      */
-    fun getLastErrorMessage(): String {
-        return if (lastUsedEngine == RuntimeSpec.ENGINE_MONO) {
-            MonoLauncher.lastErrorMsg
-        } else {
-            DotNetLauncher.hostfxrLastErrorMsg
-        }
-    }
+    fun getLastErrorMessage(): String = MonoLauncher.lastErrorMsg
 
     /**
      * 启动 .NET 程序集
@@ -231,7 +190,7 @@ object GameLauncher {
      *                       List of patches to enable, null means no patches
      * @param rendererOverride 可选的渲染器覆盖（null 表示使用全局设置）
      *                         Optional renderer override (null means use global setting)
-     * @param dotNetRuntimeVersionOverride 可选的 .NET 运行时版本覆盖（null 表示使用全局设置）
+     * @param runtimeVersionOverride 可选的 Mono 运行时版本覆盖（null 表示使用全局设置）
      *                                     Optional .NET runtime version override (null means use global setting)
      * @param gameEnvVars 游戏环境变量（null 值表示在启动前 unset 对应变量）
      *                    Game environment variables (null value means unset before launch)
@@ -240,16 +199,17 @@ object GameLauncher {
      *         - 0 或正数：正常退出码 / Normal exit code
      *         - -1：启动失败（文件不存在或发生异常）/ Launch failed (file not found or exception)
      */
-    fun launchDotNetAssembly(
+    fun launchMonoAssembly(
         assemblyPath: String,
         args: Array<String>,
         enabledPatches: List<Patch>? = null,
         rendererOverride: String? = null,
-        dotNetRuntimeVersionOverride: String? = null,
-        gameEnvVars: Map<String, String?> = emptyMap()
+        runtimeVersionOverride: String? = null,
+        gameEnvVars: Map<String, String?> = emptyMap(),
+        gameType: String? = null
     ): Int {
         try {
-            AppLog.i(TAG, "=== 开始启动 .NET 程序集 / Starting .NET Assembly Launch ===")
+            AppLog.i(TAG, "=== 开始启动 Mono 程序集 / Starting Mono Assembly Launch ===")
             AppLog.i(TAG, "程序集路径 / Assembly path: $assemblyPath")
             AppLog.i(TAG, "启动参数 / Arguments: ${args.joinToString(", ")}")
             AppLog.i(TAG, "启用补丁数 / Enabled patches: ${enabledPatches?.size ?: 0}")
@@ -293,6 +253,19 @@ object GameLauncher {
                 "TMPDIR" to cacheDir
             )
             AppLog.d(TAG, "XDG 环境变量设置完成 / XDG environment variables set: OK")
+
+            // 步骤4.5：首次进入游戏时修正分辨率/全屏配置
+            // Mono 游戏（Terraria / tModLoader 等）在配置文件不存在时会用 800x600
+            // 窗口模式启动，而 Android 的 SDL Surface 是全屏的，于是首帧被拉伸。
+            // 只在配置文件缺失（即首次启动）时写入全屏 + 设备分辨率，之后尊重游戏内设置。
+            if (SettingsAccess.isMonoFixFirstLaunchResolution) {
+                MonoFirstLaunchConfig.ensureFullscreenOnFirstLaunch(
+                    dataDir = dataDir,
+                    gameType = gameType,
+                    assemblyPath = assemblyPath,
+                    context = appContext
+                )
+            }
 
             // 步骤5：应用用户设置
             // Step 5: Apply user settings
@@ -417,41 +390,29 @@ object GameLauncher {
                 AppLog.d(TAG, "游戏环境变量应用完成 / Per-game env vars applied: OK")
             }
 
-            // 步骤11：按选中的运行时引擎启动（CoreCLR / Mono）
-            // Step 11: Launch with the selected runtime engine (CoreCLR / Mono)
-            // The managed backend cannot override the Activity that owns SDL's Android JNI bindings.
+            // 步骤11：用 Mono 启动
+            // Step 11: Launch with Mono
+            // 旧 FNA 仍走 SDL2 API，由 SDL3 的 sdl2-compat 层承接。
             val sdlBackend = if (SdlVersion.requiresSdl2Compat(File(assemblyPath))) {
                 "SDL2"
             } else {
-                SdlVersion.displayName(SettingsAccess.runtimeSdlVersion)
+                "SDL3"
             }
             EnvVarsManager.quickSetEnvVars(mapOf("FNA_PLATFORM_BACKEND" to sdlBackend))
-            AppLog.i(TAG, "FNA API backend: $sdlBackend; SDL runtime: ${SettingsAccess.runtimeSdlVersion}")
+            AppLog.i(TAG, "FNA API backend: $sdlBackend; SDL runtime: ${SdlVersion.displayName()}")
 
-            val runtimeSpec = resolveRuntimeSpec(dotNetRuntimeVersionOverride)
-            val decodedRuntime = RuntimeSpec.decode(runtimeSpec)
-            lastUsedEngine = decodedRuntime.engine
+            val monoVersion = resolveMonoVersion(runtimeVersionOverride)
+            AppLog.i(
+                TAG,
+                "通过 Mono 启动程序集 / Launching assembly with Mono, version=$monoVersion"
+            )
+            val result = MonoLauncher.launchAssembly(
+                assemblyPath = assemblyPath,
+                args = args,
+                monoRuntimeVersionOverride = monoVersion
+            )
 
-            val result = if (decodedRuntime.isMono) {
-                AppLog.i(
-                    TAG,
-                    "通过 Mono 启动程序集 / Launching assembly with Mono, version=${decodedRuntime.version}"
-                )
-                MonoLauncher.launchAssembly(
-                    assemblyPath = assemblyPath,
-                    args = args,
-                    monoRuntimeVersionOverride = decodedRuntime.version
-                )
-            } else {
-                AppLog.i(TAG, "通过 hostfxr 启动 .NET 运行时 / Launching .NET runtime with hostfxr...")
-                DotNetLauncher.hostfxrLaunch(
-                    assemblyPath = assemblyPath,
-                    args = args,
-                    dotNetRuntimeVersionOverride = decodedRuntime.version.ifBlank { null }
-                )
-            }
-
-            AppLog.i(TAG, "=== .NET 程序集启动完成 / .NET Assembly Launch Completed ===")
+            AppLog.i(TAG, "=== Mono 程序集启动完成 / Mono Assembly Launch Completed ===")
             AppLog.i(TAG, "退出代码 / Exit code: $result")
 
             return result

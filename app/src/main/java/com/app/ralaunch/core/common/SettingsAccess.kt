@@ -7,7 +7,6 @@ import com.app.ralaunch.core.model.ThemeMode
 import com.app.ralaunch.core.model.TouchInputMode
 import com.app.ralaunch.core.di.contract.ISettingsRepositoryServiceV2
 import com.app.ralaunch.core.platform.runtime.RendererRegistry
-import com.app.ralaunch.core.platform.runtime.SdlVersion
 import kotlinx.coroutines.runBlocking
 import org.koin.java.KoinJavaComponent
 
@@ -96,22 +95,6 @@ object SettingsAccess {
     val isTouchMultitouchEnabled: Boolean
         get() = settings.touchMultitouchEnabled
 
-    /** 选中的 SDL 版本（"sdl3"/"sdl2"），归一化后返回；默认 SDL2 */
-    val selectedSdlVersion: String
-        get() = SdlVersion.normalize(settings.selectedSdlVersion)
-
-    /** SDL's JNI and native libraries must follow the active Activity after compatibility fallback. */
-    val runtimeSdlVersion: String
-        get() = when {
-            org.libsdl.app2.SDL.getContext() is org.libsdl.app2.SDLActivity -> SdlVersion.SDL2
-            org.libsdl.app.SDL.getContext() is org.libsdl.app.SDLActivity -> SdlVersion.SDL3
-            else -> selectedSdlVersion
-        }
-
-    var isUseSdl2: Boolean
-        get() = SdlVersion.isSdl2(settings.selectedSdlVersion)
-        set(value) = update { selectedSdlVersion = if (value) SdlVersion.SDL2 else SdlVersion.SDL3 }
-
     // FNA 触屏设置
     var mouseRightStickSpeed: Int
         get() = settings.mouseRightStickSpeed
@@ -183,34 +166,30 @@ object SettingsAccess {
         get() = settings.targetFps
         set(value) = update { targetFps = value }
 
-    // CoreCLR GC 设置
-    var isServerGC: Boolean
-        get() = settings.serverGC
-        set(value) = update { serverGC = value }
+    // Mono 运行时设置
+    var isMonoLlvmEnabled: Boolean
+        get() = settings.monoLlvmEnabled
+        set(value) = update { monoLlvmEnabled = value }
 
-    var isConcurrentGC: Boolean
-        get() = settings.concurrentGC
-        set(value) = update { concurrentGC = value }
+    var isMonoVerboseLoggingEnabled: Boolean
+        get() = settings.monoVerboseLoggingEnabled
+        set(value) = update { monoVerboseLoggingEnabled = value }
 
-    val gcHeapCount: String
-        get() = settings.gcHeapCount
+    var isMonoGcTuningEnabled: Boolean
+        get() = settings.monoGcTuningEnabled
+        set(value) = update { monoGcTuningEnabled = value }
 
-    val isRetainVM: Boolean
-        get() = settings.retainVM
+    var monoGcNurserySizeMb: Int
+        get() = settings.monoGcNurserySizeMb
+        set(value) = update { monoGcNurserySizeMb = value }
 
-    var isTieredCompilation: Boolean
-        get() = settings.tieredCompilation
-        set(value) = update { tieredCompilation = value }
+    var isMonoAggressiveJitEnabled: Boolean
+        get() = settings.monoAggressiveJitEnabled
+        set(value) = update { monoAggressiveJitEnabled = value }
 
-    var isCoreClrXiaomiCompatEnabled: Boolean
-        get() = settings.coreClrXiaomiCompatEnabled
-        set(value) = update { coreClrXiaomiCompatEnabled = value }
-
-    val isQuickJIT: Boolean
-        get() = settings.quickJIT
-
-    val jitOptimizeType: Int
-        get() = settings.jitOptimizeType
+    var isMonoFixFirstLaunchResolution: Boolean
+        get() = settings.monoFixFirstLaunchResolution
+        set(value) = update { monoFixFirstLaunchResolution = value }
 
     var isFPSDisplayEnabled: Boolean
         get() = settings.fpsDisplayEnabled

@@ -129,8 +129,9 @@ class GamePresenter : GameContract.Presenter {
             args = emptyArray(),
             enabledPatches = enabledPatches,
             rendererOverride = normalizeOptional(game.rendererOverride),
-            dotNetRuntimeVersionOverride = normalizeOptional(game.dotNetRuntimeVersionOverride),
-            gameEnvVars = game.gameEnvVars
+            runtimeVersionOverride = normalizeOptional(game.runtimeVersionOverride),
+            gameEnvVars = game.gameEnvVars,
+            gameType = game.gameId
         )
     }
 
@@ -171,8 +172,9 @@ class GamePresenter : GameContract.Presenter {
             args = gameArgs,
             enabledPatches = enabledPatches,
             rendererOverride = gameRendererOverride,
-            dotNetRuntimeVersionOverride = null,
-            gameEnvVars = gameEnvVars
+            runtimeVersionOverride = null,
+            gameEnvVars = gameEnvVars,
+            gameType = gameId
         )
     }
 
@@ -181,16 +183,18 @@ class GamePresenter : GameContract.Presenter {
         args: Array<String>,
         enabledPatches: List<Patch>,
         rendererOverride: String?,
-        dotNetRuntimeVersionOverride: String?,
-        gameEnvVars: Map<String, String?>
+        runtimeVersionOverride: String?,
+        gameEnvVars: Map<String, String?>,
+        gameType: String?
     ): Int {
-        val exitCode = GameLauncher.launchDotNetAssembly(
+        val exitCode = GameLauncher.launchMonoAssembly(
             assemblyPath = assemblyPath,
             args = args,
             enabledPatches = enabledPatches,
             rendererOverride = rendererOverride,
-            dotNetRuntimeVersionOverride = dotNetRuntimeVersionOverride,
-            gameEnvVars = gameEnvVars
+            runtimeVersionOverride = runtimeVersionOverride,
+            gameEnvVars = gameEnvVars,
+            gameType = gameType
         ).also { code ->
             onGameExit(code, GameLauncher.getLastErrorMessage())
         }

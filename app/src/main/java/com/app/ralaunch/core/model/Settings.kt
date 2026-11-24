@@ -146,16 +146,6 @@ data class AppSettings(
     var shaderLowPrecision: Boolean = false,
     var targetFps: Int = 0,
 
-    // CoreCLR 设置
-    var serverGC: Boolean = false,
-    var concurrentGC: Boolean = true,
-    var gcHeapCount: String = "auto",
-    var tieredCompilation: Boolean = true,
-    var quickJIT: Boolean = true,
-    var jitOptimizeType: Int = 0,
-    var coreClrXiaomiCompatEnabled: Boolean = false,
-    var retainVM: Boolean = false,
-
     // 内存优化
     var killLauncherUIAfterLaunch: Boolean = false,
 
@@ -176,18 +166,17 @@ data class AppSettings(
     var monoLlvmEnabled: Boolean = false,
     /** 输出 Mono 运行时详细日志（MONO_LOG_LEVEL/MONO_LOG_MASK） */
     var monoVerboseLoggingEnabled: Boolean = false,
+    /** 启用 SGen 大 nursery + 并发并行 major GC，减少游戏内 GC 卡顿 */
+    var monoGcTuningEnabled: Boolean = true,
+    /** SGen nursery 大小（MB），必须为 2 的幂 */
+    var monoGcNurserySizeMb: Int = 128,
+    /** 启用更激进但收益更高的 JIT 优化（aggressive-inlining / alias-analysis / unsafe） */
+    var monoAggressiveJitEnabled: Boolean = true,
+    /** 首次进入游戏时把常见 Mono 游戏配置成设备原生分辨率 + 全屏 */
+    var monoFixFirstLaunchResolution: Boolean = true,
 
     // Runtime 设置
-    var selectedDotnetRuntimeVersion: String = "",
     var selectedMonoRuntimeVersion: String = "",
-    /** 选中的 .NET 运行时引擎："dotnet"（CoreCLR）或 "mono" */
-    var selectedRuntimeEngine: String = "dotnet",
-    /**
-     * 选中的 SDL 版本："sdl3"（Android 后端 + SDLActivity Java 绑定）或
-     * "sdl2"（Android 后端 + org.libsdl.app2 Java 胶水层）。
-     * 见 [com.app.ralaunch.core.platform.runtime.SdlVersion]。
-     */
-    var selectedSdlVersion: String = "sdl2",
     var selectedBox64RuntimeVersion: String = ""
 ) {
     companion object {

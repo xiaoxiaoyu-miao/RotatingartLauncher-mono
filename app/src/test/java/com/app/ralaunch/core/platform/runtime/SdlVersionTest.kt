@@ -28,11 +28,10 @@ class SdlVersionTest {
     }
 
     @Test
-    fun dualBackendFnaKeepsSelectedVersion() {
+    fun dualBackendFnaDoesNotRequireCompat() {
         val game = game()
         fna(game.resolveSibling("FNA.dll"), sdl3 = true)
         assertEquals(false, SdlVersion.requiresSdl2Compat(game))
-        assertEquals(SdlVersion.SDL2, SdlVersion.normalize(SdlVersion.SDL2))
     }
 
     @Test
