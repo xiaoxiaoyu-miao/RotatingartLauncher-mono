@@ -48,7 +48,7 @@ android {
     externalNativeBuild {
         cmake {
             path = file("../core/CMakeLists.txt")
-            version = "4.4.5"
+            version = if (useLocalToolchain) "4.4.5" else "3.22.1"
         }
     }
 
